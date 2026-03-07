@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Karybu - Gestor de Ventas</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #6b2d7f;
+            --primary-dark: #5a1f6d;
+            --primary-light: #8b4fa8;
+            --bg: #fafafa;
+            --card: #ffffff;
+            --text: #1a1a1a;
+            --text-light: #666;
+            --border: #e0e0e0;
+            --success: #7cb342;
+            --danger: #e53935;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .header p {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+
+        .tab-btn {
+            flex-shrink: 0;
+            padding: 10px 16px;
+            border: 2px solid var(--border);
+            background: var(--card);
+            color: var(--text);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--text);
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(107, 45, 127, 0.1);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(107, 45, 127, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--border);
+            color: var(--text);
+            font-size: 14px;
+            padding: 10px;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+            font-size: 14px;
+            padding: 10px;
+            width: auto;
+        }
+
+        .list-item {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .list-item-info {
+            flex-grow: 1;
+        }
+
+        .list-item-title {
+            font-weight: 600;
+            font-size: 15px;
+            margin-bottom: 4px;
+        }
+
+        .list-item-desc {
+            font-size: 13px;
+            color: var(--text-light);
+        }
+
+        .list-item-value {
+            text-align: right;
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 16px;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-light);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .stat-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-light);
+        }
+
+        .error {
+            background: rgba(229, 57, 53, 0.1);
+            border-left: 4px solid var(--danger);
+            padding: 12px;
+            border-radius: 6px;
+            color: var(--danger);
+            margin-bottom: 16px;
+            font-size: 13px;
+        }
+
+        .success-msg {
+            background: rgba(124, 179, 66, 0.1);
+            border-left: 4px solid var(--success);
+            padding: 12px;
+            border-radius: 6px;
+            color: var(--success);
+            margin-bottom: 16px;
+            font-size: 13px;
+        }
+
+        .row-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .row-2 input {
+            width: 100%;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 16px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .row-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>✨ Karybu Accesorios</h1>
+        <p>Gestor de ventas y stock</p>
+    </div>
+
+    <div class="container">
+        <div id="notification"></div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('ventas')">💰 Ventas</button>
+            <button class="tab-btn" onclick="switchTab('compras')">📦 Compras</button>
+            <button class="tab-btn" onclick="switchTab('stock')">📊 Stock</button>
+            <button class="tab-btn" onclick="switchTab('precios')">💳 Precios</button>
+        </div>
+
+        <!-- VENTAS -->
+        <div id="ventas" class="tab-content active">
+            <div class="card">
+                <h3 style="margin-bottom: 16px; color: var(--primary);">Registrar Venta</h3>
+                
+                <div class="form-group">
+                    <label>Producto/Joya</label>
+                    <input type="text" id="ventaProducto" placeholder="Ej: Collar de perlas">
+                </div>
+
+                <div class="row-2">
+                    <div class="form-group">
+                        <label>Cantidad</label>
+                        <input type="number" id="ventaCantidad" placeholder="1" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Precio</label>
+                        <input type="number" id="ventaPrecio" placeholder="$" step="0.01" min="0">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Cliente</label>
+                    <input type="text" id="ventaCliente" placeholder="Nombre del cliente">
+                </div>
+
+                <button class="btn btn-primary" onclick="agregarVenta()">✅ Guardar Venta</button>
+            </div>
+
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-label">Ventas hoy</div>
+                    <div class="stat-value" id="ventasHoy">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total $</div>
+                    <div class="stat-value" id="totalVentas">$0</div>
+                </div>
+            </div>
+
+            <div id="listaVentas"></div>
+        </div>
+
+        <!-- COMPRAS -->
+        <div id="compras" class="tab-content">
+            <div class="card">
+                <h3 style="margin-bottom: 16px; color: var(--primary);">Registrar Compra</h3>
+                
+                <div class="form-group">
+                    <label>Material/Accesorio</label>
+                    <input type="text" id="compraProducto" placeholder="Ej: Cadena dorada 50cm">
+                </div>
+
+                <div class="row-2">
+                    <div class="form-group">
+                        <label>Cantidad</label>
+                        <input type="number" id="compraCantidad" placeholder="1" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Costo</label>
+                        <input type="number" id="compraCosto" placeholder="$" step="0.01" min="0">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Proveedor</label>
+                    <input type="text" id="compraProveedor" placeholder="Nombre del proveedor">
+                </div>
+
+                <button class="btn btn-primary" onclick="agregarCompra()">✅ Guardar Compra</button>
+            </div>
+
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-label">Compras</div>
+                    <div class="stat-value" id="totalCompras">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Gasto Total</div>
+                    <div class="stat-value" id="gastoTotal">$0</div>
+                </div>
+            </div>
+
+            <div id="listaCompras"></div>
+        </div>
+
+        <!-- STOCK -->
+        <div id="stock" class="tab-content">
+            <div class="card">
+                <h3 style="margin-bottom: 16px; color: var(--primary);">Agregar Artículo al Stock</h3>
+                
+                <div class="form-group">
+                    <label>Nombre del Artículo</label>
+                    <input type="text" id="stockNombre" placeholder="Ej: Aros de turquesa">
+                </div>
+
+                <div class="row-2">
+                    <div class="form-group">
+                        <label>Stock Disponible</label>
+                        <input type="number" id="stockCantidad" placeholder="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Stock Mínimo</label>
+                        <input type="number" id="stockMinimo" placeholder="5" min="0">
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="agregarStock()">✅ Guardar Artículo</button>
+            </div>
+
+            <div id="listaStock"></div>
+        </div>
+
+        <!-- PRECIOS -->
+        <div id="precios" class="tab-content">
+            <div class="card">
+                <h3 style="margin-bottom: 16px; color: var(--primary);">Administrar Precios</h3>
+                
+                <div class="form-group">
+                    <label>Producto</label>
+                    <input type="text" id="precioProducto" placeholder="Ej: Pulsera de cristal">
+                </div>
+
+                <div class="row-2">
+                    <div class="form-group">
+                        <label>Costo</label>
+                        <input type="number" id="precioCosto" placeholder="$" step="0.01" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Precio Venta</label>
+                        <input type="number" id="precioVenta" placeholder="$" step="0.01" min="0">
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="agregarPrecio()">✅ Guardar Precio</button>
+            </div>
+
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-label">Margen Promedio</div>
+                    <div class="stat-value" id="margenPromedio">0%</div>
+                </div>
+            </div>
+
+            <div id="listaPrecios"></div>
+        </div>
+    </div>
+
+    <script>
+        const SHEET_ID = '1HNwZQONNZwgCMOIa9Y-TKEOyTRksd6U4eZ4CyMX-icU';
+        const API_URL = window.location.origin + '/api';
+
+        function showNotification(message, type = 'success') {
+            const notif = document.getElementById('notification');
+            notif.innerHTML = `<div class="${type}-msg">${message}</div>`;
+            setTimeout(() => {
+                notif.innerHTML = '';
+            }, 3000);
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(tab).classList.add('active');
+            event.target.classList.add('active');
+
+            if (tab === 'ventas') cargarVentas();
+            if (tab === 'compras') cargarCompras();
+            if (tab === 'stock') cargarStock();
+            if (tab === 'precios') cargarPrecios();
+        }
+
+        // ========== VENTAS ==========
+        async function agregarVenta() {
+            const producto = document.getElementById('ventaProducto').value;
+            const cantidad = parseFloat(document.getElementById('ventaCantidad').value);
+            const precio = parseFloat(document.getElementById('ventaPrecio').value);
+            const cliente = document.getElementById('ventaCliente').value;
+
+            if (!producto || !cantidad || !precio) {
+                showNotification('⚠️ Completa todos los campos', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/ventas`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ producto, cantidad, precio, cliente })
+                });
+
+                if (response.ok) {
+                    document.getElementById('ventaProducto').value = '';
+                    document.getElementById('ventaCantidad').value = '';
+                    document.getElementById('ventaPrecio').value = '';
+                    document.getElementById('ventaCliente').value = '';
+                    showNotification('✅ Venta registrada');
+                    cargarVentas();
+                }
+            } catch (error) {
+                showNotification('❌ Error al guardar venta', 'error');
+            }
+        }
+
+        async function cargarVentas() {
+            try {
+                const response = await fetch(`${API_URL}/ventas`);
+                const ventas = await response.json();
+
+                const hoy = new Date().toLocaleDateString('es-AR');
+                const ventasHoy = ventas.filter(v => v.fecha === hoy).length;
+                const totalVentas = ventas.reduce((sum, v) => sum + (v.total || 0), 0);
+
+                document.getElementById('ventasHoy').textContent = ventasHoy;
+                document.getElementById('totalVentas').textContent = '$' + totalVentas.toFixed(2);
+
+                let html = '';
+                if (ventas.length === 0) {
+                    html = '<div class="empty"><div style="font-size: 48px; margin-bottom: 12px;">📭</div><p>Sin ventas aún</p></div>';
+                } else {
+                    ventas.reverse().forEach(v => {
+                        html += `
+                            <div class="list-item">
+                                <div class="list-item-info">
+                                    <div class="list-item-title">${v.producto}</div>
+                                    <div class="list-item-desc">${v.cantidad}x @ $${v.precio} ${v.cliente ? `(${v.cliente})` : ''}</div>
+                                    <div class="list-item-desc" style="font-size: 12px;">${v.fecha}</div>
+                                </div>
+                                <div class="list-item-value">$${v.total?.toFixed(2) || '0'}</div>
+                            </div>
+                        `;
+                    });
+                }
+                document.getElementById('listaVentas').innerHTML = html;
+            } catch (error) {
+                document.getElementById('listaVentas').innerHTML = '<div class="error">Error al cargar ventas</div>';
+            }
+        }
+
+        // ========== COMPRAS ==========
+        async function agregarCompra() {
+            const producto = document.getElementById('compraProducto').value;
+            const cantidad = parseFloat(document.getElementById('compraCantidad').value);
+            const costo = parseFloat(document.getElementById('compraCosto').value);
+            const proveedor = document.getElementById('compraProveedor').value;
+
+            if (!producto || !cantidad || !costo) {
+                showNotification('⚠️ Completa todos los campos', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/compras`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ producto, cantidad, costo, proveedor })
+                });
+
+                if (response.ok) {
+                    document.getElementById('compraProducto').value = '';
+                    document.getElementById('compraCantidad').value = '';
+                    document.getElementById('compraCosto').value = '';
+                    document.getElementById('compraProveedor').value = '';
+                    showNotification('✅ Compra registrada');
+                    cargarCompras();
+                }
+            } catch (error) {
+                showNotification('❌ Error al guardar compra', 'error');
+            }
+        }
+
+        async function cargarCompras() {
+            try {
+                const response = await fetch(`${API_URL}/compras`);
+                const compras = await response.json();
+
+                const totalCompras = compras.length;
+                const gastoTotal = compras.reduce((sum, c) => sum + (c.total || 0), 0);
+
+                document.getElementById('totalCompras').textContent = totalCompras;
+                document.getElementById('gastoTotal').textContent = '$' + gastoTotal.toFixed(2);
+
+                let html = '';
+                if (compras.length === 0) {
+                    html = '<div class="empty"><div style="font-size: 48px; margin-bottom: 12px;">📭</div><p>Sin compras aún</p></div>';
+                } else {
+                    compras.reverse().forEach(c => {
+                        html += `
+                            <div class="list-item">
+                                <div class="list-item-info">
+                                    <div class="list-item-title">${c.producto}</div>
+                                    <div class="list-item-desc">${c.cantidad}x @ $${c.costo} ${c.proveedor ? `(${c.proveedor})` : ''}</div>
+                                    <div class="list-item-desc" style="font-size: 12px;">${c.fecha}</div>
+                                </div>
+                                <div class="list-item-value">$${c.total?.toFixed(2) || '0'}</div>
+                            </div>
+                        `;
+                    });
+                }
+                document.getElementById('listaCompras').innerHTML = html;
+            } catch (error) {
+                document.getElementById('listaCompras').innerHTML = '<div class="error">Error al cargar compras</div>';
+            }
+        }
+
+        // ========== STOCK ==========
+        async function agregarStock() {
+            const nombre = document.getElementById('stockNombre').value;
+            const cantidad = parseFloat(document.getElementById('stockCantidad').value);
+            const minimo = parseFloat(document.getElementById('stockMinimo').value) || 5;
+
+            if (!nombre || cantidad === '') {
+                showNotification('⚠️ Completa todos los campos', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/stock`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nombre, cantidad, minimo })
+                });
+
+                if (response.ok) {
+                    document.getElementById('stockNombre').value = '';
+                    document.getElementById('stockCantidad').value = '';
+                    document.getElementById('stockMinimo').value = '';
+                    showNotification('✅ Artículo agregado');
+                    cargarStock();
+                }
+            } catch (error) {
+                showNotification('❌ Error al guardar artículo', 'error');
+            }
+        }
+
+        async function cargarStock() {
+            try {
+                const response = await fetch(`${API_URL}/stock`);
+                const stock = await response.json();
+
+                let html = '';
+                if (stock.length === 0) {
+                    html = '<div class="empty"><div style="font-size: 48px; margin-bottom: 12px;">📭</div><p>Sin artículos aún</p></div>';
+                } else {
+                    stock.reverse().forEach(item => {
+                        const falta = item.cantidad < item.minimo;
+                        html += `
+                            <div class="list-item" style="border-color: ${falta ? 'var(--danger)' : 'var(--border)'}">
+                                <div class="list-item-info">
+                                    <div class="list-item-title">${item.nombre}</div>
+                                    <div class="list-item-desc">Mínimo: ${item.minimo} unidades</div>
+                                </div>
+                                <div class="list-item-value" style="color: ${falta ? 'var(--danger)' : 'var(--success)'}">${item.cantidad}</div>
+                            </div>
+                        `;
+                    });
+                }
+                document.getElementById('listaStock').innerHTML = html;
+            } catch (error) {
+                document.getElementById('listaStock').innerHTML = '<div class="error">Error al cargar stock</div>';
+            }
+        }
+
+        // ========== PRECIOS ==========
+        async function agregarPrecio() {
+            const producto = document.getElementById('precioProducto').value;
+            const costo = parseFloat(document.getElementById('precioCosto').value);
+            const venta = parseFloat(document.getElementById('precioVenta').value);
+
+            if (!producto || !costo || !venta) {
+                showNotification('⚠️ Completa todos los campos', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/precios`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ producto, costo, venta })
+                });
+
+                if (response.ok) {
+                    document.getElementById('precioProducto').value = '';
+                    document.getElementById('precioCosto').value = '';
+                    document.getElementById('precioVenta').value = '';
+                    showNotification('✅ Precio guardado');
+                    cargarPrecios();
+                }
+            } catch (error) {
+                showNotification('❌ Error al guardar precio', 'error');
+            }
+        }
+
+        async function cargarPrecios() {
+            try {
+                const response = await fetch(`${API_URL}/precios`);
+                const precios = await response.json();
+
+                let margenTotal = 0;
+                if (precios.length > 0) {
+                    margenTotal = precios.reduce((sum, p) => sum + parseFloat(p.margen || 0), 0) / precios.length;
+                }
+                document.getElementById('margenPromedio').textContent = margenTotal.toFixed(1) + '%';
+
+                let html = '';
+                if (precios.length === 0) {
+                    html = '<div class="empty"><div style="font-size: 48px; margin-bottom: 12px;">📭</div><p>Sin precios aún</p></div>';
+                } else {
+                    precios.reverse().forEach(p => {
+                        html += `
+                            <div class="list-item">
+                                <div class="list-item-info">
+                                    <div class="list-item-title">${p.producto}</div>
+                                    <div class="list-item-desc">Costo: $${p.costo} → Venta: $${p.venta}</div>
+                                    <div class="list-item-desc" style="font-size: 12px;">Margen: ${p.margen}%</div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+                document.getElementById('listaPrecios').innerHTML = html;
+            } catch (error) {
+                document.getElementById('listaPrecios').innerHTML = '<div class="error">Error al cargar precios</div>';
+            }
+        }
+
+        // Cargar datos al iniciar
+        window.addEventListener('load', () => {
+            cargarVentas();
+        });
+    </script>
+</body>
+</html>

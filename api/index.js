@@ -44,13 +44,26 @@ async function getDoc() {
     
     if (credentials) {
         try {
-            await doc.useServiceAccountAuth({
-                client_email: credentials.client_email,
-                private_key: credentials.private_key,
-            });
+            console.log('Intentando autenticar con serviceAccountAuth...');
+            // En versión 4.1.1, el método correcto es useServiceAccountAuth
+            // Pero necesita ser llamado diferente
+            await doc.useServiceAccountAuth(credentials);
+            console.log('✅ Autenticación exitosa');
         } catch (authError) {
             console.error('Auth error:', authError.message);
-            throw new Error('Google Sheets authentication failed: ' + authError.message);
+            console.error('Trying alternative auth method...');
+            // Fallback: intentar con getAuth
+            try {
+                const { GoogleAuth } = require('google-auth-library');
+                const auth = new GoogleAuth({
+                    credentials: credentials,
+                    scopes: ['https://www.googleapis.com/auth/spreadsheets']
+                });
+                doc.auth = auth;
+                console.log('✅ Autenticación alternativa exitosa');
+            } catch (fallbackError) {
+                throw new Error('Google Sheets authentication failed: ' + authError.message);
+            }
         }
     } else {
         throw new Error('No credentials found');
@@ -58,6 +71,7 @@ async function getDoc() {
     
     try {
         await doc.loadInfo();
+        console.log('✅ Sheet info cargado correctamente');
     } catch (loadError) {
         console.error('LoadInfo error:', loadError.message);
         throw new Error('Could not load sheet info: ' + loadError.message);
