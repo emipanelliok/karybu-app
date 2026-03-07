@@ -12,12 +12,27 @@ const SHEET_ID = '1HNwZQONNZwgCMOIa9Y-TKEOyTRksd6U4eZ4CyMX-icU';
 // Obtener credenciales de variables de entorno
 const getCredentials = () => {
     try {
+        console.log('=== CREDENCIALES DEBUG ===');
+        console.log('GOOGLE_SERVICE_ACCOUNT exists:', !!process.env.GOOGLE_SERVICE_ACCOUNT);
+        console.log('GOOGLE_SERVICE_ACCOUNT type:', typeof process.env.GOOGLE_SERVICE_ACCOUNT);
+        console.log('GOOGLE_SERVICE_ACCOUNT length:', process.env.GOOGLE_SERVICE_ACCOUNT ? process.env.GOOGLE_SERVICE_ACCOUNT.length : 'null');
+        
+        // Log primeros 100 caracteres
+        if (process.env.GOOGLE_SERVICE_ACCOUNT) {
+            console.log('First 100 chars:', process.env.GOOGLE_SERVICE_ACCOUNT.substring(0, 100));
+        }
+        
+        // Log todas las env vars que contienen GOOGLE
+        const googleVars = Object.keys(process.env).filter(k => k.includes('GOOGLE'));
+        console.log('Variables con GOOGLE:', googleVars);
+        
         if (process.env.GOOGLE_SERVICE_ACCOUNT) {
             return JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
         }
         return null;
     } catch (error) {
         console.error('Error parsing credentials:', error.message);
+        console.error('Error stack:', error.stack);
         return null;
     }
 };
