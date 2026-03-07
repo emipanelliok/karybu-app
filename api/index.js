@@ -246,6 +246,47 @@ app.post('/api/compras', asyncHandler(async (req, res) => {
     res.json({ success: true });
 }));
 
+// CLIENTES GET ENDPOINT
+app.get('/api/clientes', asyncHandler(async (req, res) => {
+    const doc = await getDoc();
+    let sheet = doc.sheetsByTitle['Clientes'];
+    
+    if (!sheet) {
+        return res.json([]);
+    }
+    
+    const rows = await sheet.getRows();
+    const clientes = rows.map(row => ({
+        nombre: row.get('Nombre') || '',
+        telefono: row.get('Teléfono') || '',
+        mail: row.get('Mail') || '',
+        direccion: row.get('Dirección') || ''
+    }));
+    
+    res.json(clientes);
+}));
+
+// CLIENTES POST ENDPOINT
+app.post('/api/clientes', asyncHandler(async (req, res) => {
+    const { nombre, telefono, mail, direccion } = req.body;
+    const doc = await getDoc();
+    let sheet = doc.sheetsByTitle['Clientes'];
+    
+    if (!sheet) {
+        sheet = await doc.addSheet({ title: 'Clientes' });
+        await sheet.setHeaderRow(['Nombre', 'Teléfono', 'Mail', 'Dirección']);
+    }
+    
+    await sheet.addRow({
+        'Nombre': nombre || '',
+        'Teléfono': telefono || '',
+        'Mail': mail || '',
+        'Dirección': direccion || ''
+    });
+    
+    res.json({ success: true, mensaje: 'Cliente agregado' });
+}));
+
 // Error handler
 app.use((err, req, res, next) => {
     console.error('API Error:', err);
