@@ -170,13 +170,13 @@ app.get('/api/ventas', asyncHandler(async (req, res) => {
 
 // VENTAS POST ENDPOINT
 app.post('/api/ventas', asyncHandler(async (req, res) => {
-    const { codigo, detalle, cantidad, precioUnitario, cliente } = req.body;
+    const { codigo, detalle, cantidad, precioUnitario, cliente, telefono } = req.body;
     const doc = await getDoc();
     let sheet = doc.sheetsByTitle['Ventas'];
     
     if (!sheet) {
         sheet = await doc.addSheet({ title: 'Ventas' });
-        await sheet.setHeaderRow(['Código', 'Detalle', 'Cantidad', 'Precio Unitario', 'Total', 'Cliente', 'Fecha']);
+        await sheet.setHeaderRow(['Código', 'Detalle', 'Cantidad', 'Precio Unitario', 'Total', 'Cliente', 'Teléfono', 'Fecha']);
     }
     
     const total = cantidad * precioUnitario;
@@ -189,6 +189,7 @@ app.post('/api/ventas', asyncHandler(async (req, res) => {
         'Precio Unitario': precioUnitario,
         'Total': total,
         'Cliente': cliente || '',
+        'Teléfono': telefono || '',
         'Fecha': fecha
     });
     

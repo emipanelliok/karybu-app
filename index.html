@@ -291,6 +291,7 @@
         <div class="tabs">
             <button class="tab-btn active" onclick="switchTab('ventas', this)">💼 Ventas</button>
             <button class="tab-btn" onclick="switchTab('compras', this)">🛍 Compras</button>
+            <button class="tab-btn" onclick="switchTab('clientes', this)">👥 Clientes</button>
             <button class="tab-btn" onclick="switchTab('stock', this)">📦 Stock</button>
             <button class="tab-btn" onclick="switchTab('precios', this)">💰 Precios</button>
         </div>
@@ -326,6 +327,11 @@
                 <div class="form-group">
                     <label>Cliente (Opcional)</label>
                     <input type="text" id="ventasClienteInput" placeholder="Nombre del cliente">
+                </div>
+                
+                <div class="form-group">
+                    <label>Teléfono</label>
+                    <input type="tel" id="ventasTelefonoInput" placeholder="Teléfono del cliente" readonly style="background-color: #f5f5f5; cursor: not-allowed;">
                 </div>
                 
                 <button class="btn btn-primary" onclick="registrarVenta()">✔ Guardar Venta</button>
@@ -454,6 +460,7 @@
             const cantidad = parseInt(document.getElementById('ventasCantidadInput').value);
             const precioUnitario = parseFloat(document.getElementById('ventasPrecioInput').value);
             const cliente = document.getElementById('ventasClienteInput').value;
+            const telefono = document.getElementById('ventasTelefonoInput').value;
 
             if (!codigo || !detalle || !cantidad || !precioUnitario) {
                 mostrarError('ventasError', 'Por favor completa todos los campos');
@@ -464,7 +471,7 @@
                 const response = await fetch(`${API_BASE}/api/ventas`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ codigo, detalle, cantidad, precioUnitario, cliente })
+                    body: JSON.stringify({ codigo, detalle, cantidad, precioUnitario, cliente, telefono })
                 });
 
                 if (response.ok) {
@@ -474,6 +481,7 @@
                     document.getElementById('ventasCantidadInput').value = '1';
                     document.getElementById('ventasPrecioInput').value = '';
                     document.getElementById('ventasClienteInput').value = '';
+                    document.getElementById('ventasTelefonoInput').value = '';
                     loadVentas();
                 } else {
                     mostrarError('ventasError', 'Error al registrar la venta');
@@ -711,6 +719,117 @@
         window.addEventListener('load', () => {
             loadVentas();
         });
-    </script>
-</body>
+
+    // ============= CLIENTES =============
+    let clientesCache = [];
+
+    async function cargarClientes() {
+        try {
+            const response = await fetch('/api/clientes');
+            const clientes = await response.json();
+            clientesCache = clientes;
+            mostrarTablaClientes(clientes);
+        } catch (error) {
+            console.error('Error cargando clientes:', error);
+            document.getElementById('clientes-tbody').innerHTML = '<tr><td colspan="4" style="color: red;">Error al cargar clientes</td></tr>';
+        }
+    }
+
+    function mostrarTablaClientes(clientes) {
+        const tbody = document.getElementById('clientes-tbody');
+        if (clientes.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #999;">No hay clientes registrados</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = clientes.map(cliente => `
+            <tr>
+                <td>${cliente.nombre || '-'}</td>
+                <td>${cliente.telefono || '-'}</td>
+                <td>${cliente.mail || '-'}</td>
+                <td>${cliente.direccion || '-'}</td>
+            </tr>
+        `).join('');
+    }
+
+    async function agregarCliente(event) {
+        event.preventDefault();
+        
+        const nombre = document.getElementById('cliente-nombre').value;
+        const telefono = document.getElementById('cliente-telefono').value;
+        const mail = document.getElementById('cliente-mail').value;
+        const direccion = document.getElementById('cliente-direccion').value;
+        
+        if (!nombre) {
+            alert('El nombre del cliente es obligatorio');
+            return;
+        }
+        
+        try {
+            const response = await fetch('/api/clientes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nombre, telefono, mail, direccion })
+            });
+            
+            if (response.ok) {
+                alert('✓ Cliente agregado correctamente');
+                document.getElementById('cliente-form').reset();
+                await cargarClientes();
+            } else {
+                alert('Error al agregar cliente');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error al agregar cliente: ' + error.message);
+        }
+    }
+
+    // Autocomplete para Ventas
+    function configurarAutocompleteVentas() {
+        const inputCliente = document.getElementById('venta-cliente');
+        if (!inputCliente) return;
+        
+        inputCliente.addEventListener('input', function() {
+            const valor = this.value.toLowerCase();
+            if (valor.length === 0) {
+                limpiarSugerencias();
+                return;
+            }
+            
+            const sugerencias = clientesCache.filter(c => 
+                c.nombre.toLowerCase().includes(valor)
+            );
+            
+            mostrarSugerencias(sugerencias);
+        });
+    }
+
+    function mostrarSugerencias(clientes) {
+        let ul = document.getElementById('sugerencias-clientes');
+        if (!ul) {
+            ul = document.createElement('ul');
+            ul.id = 'sugerencias-clientes';
+            ul.style.cssText = 'position: absolute; background: white; border: 1px solid #ccc; border-radius: 4px; max-width: 300px; z-index: 100; list-style: none; padding: 0; margin: 0;';
+            document.getElementById('venta-cliente').parentElement.style.position = 'relative';
+            document.getElementById('venta-cliente').parentElement.appendChild(ul);
+        }
+        
+        ul.innerHTML = clientes.map(c => `
+            <li style="padding: 10px; cursor: pointer; border-bottom: 1px solid #eee;" onclick="seleccionarCliente('${c.nombre}', '${c.telefono}')">
+                <strong>${c.nombre}</strong> ${c.telefono ? '(' + c.telefono + ')' : ''}
+            </li>
+        `).join('');
+    }
+
+    function seleccionarCliente(nombre, telefono) {
+        document.getElementById('venta-cliente').value = nombre;
+        document.getElementById('venta-telefono').value = telefono;
+        limpiarSugerencias();
+    }
+
+    function limpiarSugerencias() {
+        const ul = document.getElementById('sugerencias-clientes');
+        if (ul) ul.remove();
+    }
 </html>
