@@ -52,7 +52,7 @@
         }
 
         .container {
-            max-width: 500px;
+            max-width: 100%;
             margin: 0 auto;
             padding: 20px;
         }
@@ -104,19 +104,26 @@
             }
         }
 
-        .card {
+        .form-card {
             background: var(--card);
-            border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        .form-title {
+            font-size: 18px;
+            font-weight: 600;
             margin-bottom: 16px;
+            color: var(--primary);
         }
 
         .form-group {
             margin-bottom: 14px;
         }
 
-        .form-group label {
+        label {
             display: block;
             font-size: 13px;
             font-weight: 600;
@@ -124,30 +131,34 @@
             color: var(--text);
         }
 
-        .form-group input,
-        .form-group select {
+        input, select {
             width: 100%;
-            padding: 12px;
+            padding: 10px 12px;
             border: 1px solid var(--border);
-            border-radius: 8px;
+            border-radius: 6px;
             font-size: 14px;
             font-family: inherit;
-            transition: border-color 0.3s ease;
+            transition: border-color 0.2s;
         }
 
-        .form-group input:focus,
-        .form-group select:focus {
+        input:focus, select:focus {
             outline: none;
             border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(107, 45, 127, 0.1);
         }
 
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
         .btn {
             width: 100%;
-            padding: 14px;
+            padding: 12px;
             border: none;
-            border-radius: 8px;
-            font-size: 16px;
+            border-radius: 6px;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -160,85 +171,31 @@
 
         .btn-primary:hover {
             background: var(--primary-dark);
-            transform: translateY(-2px);
+            transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(107, 45, 127, 0.3);
-        }
-
-        .btn-secondary {
-            background: var(--border);
-            color: var(--text);
-            font-size: 14px;
-            padding: 10px;
-        }
-
-        .btn-danger {
-            background: var(--danger);
-            color: white;
-            font-size: 14px;
-            padding: 10px;
-            width: auto;
-        }
-
-        .list-item {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 14px;
-            margin-bottom: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .list-item-info {
-            flex-grow: 1;
-        }
-
-        .list-item-title {
-            font-weight: 600;
-            font-size: 15px;
-            margin-bottom: 4px;
-        }
-
-        .list-item-desc {
-            font-size: 13px;
-            color: var(--text-light);
-        }
-
-        .list-item-value {
-            text-align: right;
-            font-weight: 600;
-            color: var(--primary);
-            font-size: 16px;
-        }
-
-        .empty {
-            text-align: center;
-            padding: 40px 20px;
-            color: var(--text-light);
         }
 
         .stats {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 12px;
-            margin-bottom: 16px;
+            margin-bottom: 20px;
         }
 
-        .stat-card {
+        .stat-box {
             background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 10px;
             padding: 16px;
+            border-radius: 8px;
             text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
         }
 
         .stat-label {
             font-size: 12px;
             color: var(--text-light);
+            margin-bottom: 6px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 6px;
         }
 
         .stat-value {
@@ -247,54 +204,80 @@
             color: var(--primary);
         }
 
+        .error {
+            background: #ffebee;
+            color: var(--danger);
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 16px;
+            border-left: 4px solid var(--danger);
+        }
+
+        .success {
+            background: #e8f5e9;
+            color: var(--success);
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 16px;
+            border-left: 4px solid var(--success);
+        }
+
+        .table-container {
+            background: var(--card);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+
+        .table-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--primary);
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        thead {
+            background: #f5f5f5;
+        }
+
+        th {
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text);
+            border-bottom: 2px solid var(--border);
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        tr:hover {
+            background: #fafafa;
+        }
+
+        .empty-message {
+            padding: 32px 16px;
+            text-align: center;
+            color: var(--text-light);
+            font-size: 14px;
+        }
+
         .loading {
             text-align: center;
             padding: 20px;
             color: var(--text-light);
-        }
-
-        .error {
-            background: rgba(229, 57, 53, 0.1);
-            border-left: 4px solid var(--danger);
-            padding: 12px;
-            border-radius: 6px;
-            color: var(--danger);
-            margin-bottom: 16px;
-            font-size: 13px;
-        }
-
-        .success-msg {
-            background: rgba(124, 179, 66, 0.1);
-            border-left: 4px solid var(--success);
-            padding: 12px;
-            border-radius: 6px;
-            color: var(--success);
-            margin-bottom: 16px;
-            font-size: 13px;
-        }
-
-        .row-2 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-
-        .row-2 input {
-            width: 100%;
-        }
-
-        @media (max-width: 600px) {
-            .container {
-                padding: 16px;
-            }
-
-            .header h1 {
-                font-size: 24px;
-            }
-
-            .row-2 {
-                grid-template-columns: 1fr;
-            }
         }
     </style>
 </head>
@@ -305,445 +288,428 @@
     </div>
 
     <div class="container">
-        <div id="notification"></div>
-
         <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('ventas')">💰 Ventas</button>
-            <button class="tab-btn" onclick="switchTab('compras')">📦 Compras</button>
-            <button class="tab-btn" onclick="switchTab('stock')">📊 Stock</button>
-            <button class="tab-btn" onclick="switchTab('precios')">💳 Precios</button>
+            <button class="tab-btn active" onclick="switchTab('ventas', this)">💼 Ventas</button>
+            <button class="tab-btn" onclick="switchTab('compras', this)">🛍 Compras</button>
+            <button class="tab-btn" onclick="switchTab('stock', this)">📦 Stock</button>
+            <button class="tab-btn" onclick="switchTab('precios', this)">💰 Precios</button>
         </div>
 
-        <!-- VENTAS -->
+        <!-- TAB VENTAS -->
         <div id="ventas" class="tab-content active">
-            <div class="card">
-                <h3 style="margin-bottom: 16px; color: var(--primary);">Registrar Venta</h3>
+            <div class="form-card">
+                <div class="form-title">Registrar Venta</div>
+                <div id="ventasError" class="error" style="display:none;"></div>
+                <div id="ventasSuccess" class="success" style="display:none;"></div>
                 
                 <div class="form-group">
-                    <label>Producto/Joya</label>
-                    <input type="text" id="ventaProducto" placeholder="Ej: Collar de perlas">
+                    <label>Código Producto</label>
+                    <input type="text" id="ventasCodigoInput" placeholder="Ej: CODIGO001">
                 </div>
-
-                <div class="row-2">
+                
+                <div class="form-group">
+                    <label>Detalle</label>
+                    <input type="text" id="ventasDetalleInput" placeholder="Nombre del producto">
+                </div>
+                
+                <div class="form-row">
                     <div class="form-group">
                         <label>Cantidad</label>
-                        <input type="number" id="ventaCantidad" placeholder="1" min="1">
+                        <input type="number" id="ventasCantidadInput" value="1" min="1">
                     </div>
                     <div class="form-group">
-                        <label>Precio</label>
-                        <input type="number" id="ventaPrecio" placeholder="$" step="0.01" min="0">
+                        <label>Precio Unitario</label>
+                        <input type="number" id="ventasPrecioInput" value="0" step="0.01">
                     </div>
                 </div>
-
+                
                 <div class="form-group">
-                    <label>Cliente</label>
-                    <input type="text" id="ventaCliente" placeholder="Nombre del cliente">
+                    <label>Cliente (Opcional)</label>
+                    <input type="text" id="ventasClienteInput" placeholder="Nombre del cliente">
                 </div>
-
-                <button class="btn btn-primary" onclick="agregarVenta()">✅ Guardar Venta</button>
+                
+                <button class="btn btn-primary" onclick="registrarVenta()">✔ Guardar Venta</button>
             </div>
 
             <div class="stats">
-                <div class="stat-card">
-                    <div class="stat-label">Ventas hoy</div>
-                    <div class="stat-value" id="ventasHoy">0</div>
+                <div class="stat-box">
+                    <div class="stat-label">Ventas Hoy</div>
+                    <div class="stat-value" id="ventasHoyCount">0</div>
                 </div>
-                <div class="stat-card">
+                <div class="stat-box">
                     <div class="stat-label">Total $</div>
-                    <div class="stat-value" id="totalVentas">$0</div>
+                    <div class="stat-value" id="ventasHoyTotal">$0</div>
                 </div>
             </div>
 
-            <div id="listaVentas"></div>
+            <div class="table-container">
+                <div class="table-title">Últimas Ventas</div>
+                <div id="ventasTableContainer">
+                    <div class="loading">Cargando ventas...</div>
+                </div>
+            </div>
         </div>
 
-        <!-- COMPRAS -->
+        <!-- TAB COMPRAS -->
         <div id="compras" class="tab-content">
-            <div class="card">
-                <h3 style="margin-bottom: 16px; color: var(--primary);">Registrar Compra</h3>
+            <div class="form-card">
+                <div class="form-title">Registrar Compra</div>
+                <div id="comprasError" class="error" style="display:none;"></div>
+                <div id="comprasSuccess" class="success" style="display:none;"></div>
                 
                 <div class="form-group">
-                    <label>Material/Accesorio</label>
-                    <input type="text" id="compraProducto" placeholder="Ej: Cadena dorada 50cm">
+                    <label>Código</label>
+                    <input type="text" id="comprasCodigoInput" placeholder="Ej: CODIGO001">
                 </div>
-
-                <div class="row-2">
+                
+                <div class="form-group">
+                    <label>Material</label>
+                    <input type="text" id="comprasMaterialInput" placeholder="Ej: Acero, Plata">
+                </div>
+                
+                <div class="form-row">
                     <div class="form-group">
                         <label>Cantidad</label>
-                        <input type="number" id="compraCantidad" placeholder="1" min="1">
+                        <input type="number" id="comprasCantidadInput" value="1" min="1">
                     </div>
                     <div class="form-group">
-                        <label>Costo</label>
-                        <input type="number" id="compraCosto" placeholder="$" step="0.01" min="0">
+                        <label>Costo Unitario</label>
+                        <input type="number" id="comprasCostoInput" value="0" step="0.01">
                     </div>
                 </div>
-
+                
                 <div class="form-group">
-                    <label>Proveedor</label>
-                    <input type="text" id="compraProveedor" placeholder="Nombre del proveedor">
+                    <label>Proveedor (Opcional)</label>
+                    <input type="text" id="comprasProveedorInput" placeholder="Nombre del proveedor">
                 </div>
-
-                <button class="btn btn-primary" onclick="agregarCompra()">✅ Guardar Compra</button>
+                
+                <button class="btn btn-primary" onclick="registrarCompra()">✔ Guardar Compra</button>
             </div>
 
-            <div class="stats">
-                <div class="stat-card">
-                    <div class="stat-label">Compras</div>
-                    <div class="stat-value" id="totalCompras">0</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Gasto Total</div>
-                    <div class="stat-value" id="gastoTotal">$0</div>
+            <div class="table-container">
+                <div class="table-title">Últimas Compras</div>
+                <div id="comprasTableContainer">
+                    <div class="loading">Cargando compras...</div>
                 </div>
             </div>
-
-            <div id="listaCompras"></div>
         </div>
 
-        <!-- STOCK -->
+        <!-- TAB STOCK -->
         <div id="stock" class="tab-content">
-            <div class="card">
-                <h3 style="margin-bottom: 16px; color: var(--primary);">Agregar Artículo al Stock</h3>
-                
-                <div class="form-group">
-                    <label>Nombre del Artículo</label>
-                    <input type="text" id="stockNombre" placeholder="Ej: Aros de turquesa">
+            <div class="table-container">
+                <div class="table-title">Stock de Productos</div>
+                <div id="stockTableContainer">
+                    <div class="loading">Cargando stock...</div>
                 </div>
-
-                <div class="row-2">
-                    <div class="form-group">
-                        <label>Stock Disponible</label>
-                        <input type="number" id="stockCantidad" placeholder="0" min="0">
-                    </div>
-                    <div class="form-group">
-                        <label>Stock Mínimo</label>
-                        <input type="number" id="stockMinimo" placeholder="5" min="0">
-                    </div>
-                </div>
-
-                <button class="btn btn-primary" onclick="agregarStock()">✅ Guardar Artículo</button>
             </div>
-
-            <div id="listaStock"></div>
         </div>
 
-        <!-- PRECIOS -->
+        <!-- TAB PRECIOS -->
         <div id="precios" class="tab-content">
-            <div class="card">
-                <h3 style="margin-bottom: 16px; color: var(--primary);">Administrar Precios</h3>
-                
-                <div class="form-group">
-                    <label>Producto</label>
-                    <input type="text" id="precioProducto" placeholder="Ej: Pulsera de cristal">
-                </div>
-
-                <div class="row-2">
-                    <div class="form-group">
-                        <label>Costo</label>
-                        <input type="number" id="precioCosto" placeholder="$" step="0.01" min="0">
-                    </div>
-                    <div class="form-group">
-                        <label>Precio Venta</label>
-                        <input type="number" id="precioVenta" placeholder="$" step="0.01" min="0">
-                    </div>
-                </div>
-
-                <button class="btn btn-primary" onclick="agregarPrecio()">✅ Guardar Precio</button>
-            </div>
-
-            <div class="stats">
-                <div class="stat-card">
-                    <div class="stat-label">Margen Promedio</div>
-                    <div class="stat-value" id="margenPromedio">0%</div>
+            <div class="table-container">
+                <div class="table-title">Lista de Precios</div>
+                <div id="preciosTableContainer">
+                    <div class="loading">Cargando precios...</div>
                 </div>
             </div>
-
-            <div id="listaPrecios"></div>
         </div>
     </div>
 
     <script>
-        const SHEET_ID = '1HNwZQONNZwgCMOIa9Y-TKEOyTRksd6U4eZ4CyMX-icU';
-        const API_URL = window.location.origin + '/api';
+        const API_BASE = '';
 
-        function showNotification(message, type = 'success') {
-            const notif = document.getElementById('notification');
-            notif.innerHTML = `<div class="${type}-msg">${message}</div>`;
-            setTimeout(() => {
-                notif.innerHTML = '';
-            }, 3000);
-        }
-
-        function switchTab(tab) {
+        // Cambiar de tab
+        function switchTab(tabName, btn) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
             
-            document.getElementById(tab).classList.add('active');
-            event.target.classList.add('active');
-
-            if (tab === 'ventas') cargarVentas();
-            if (tab === 'compras') cargarCompras();
-            if (tab === 'stock') cargarStock();
-            if (tab === 'precios') cargarPrecios();
+            document.getElementById(tabName).classList.add('active');
+            btn.classList.add('active');
+            
+            loadTabData(tabName);
         }
 
-        // ========== VENTAS ==========
-        async function agregarVenta() {
-            const producto = document.getElementById('ventaProducto').value;
-            const cantidad = parseFloat(document.getElementById('ventaCantidad').value);
-            const precio = parseFloat(document.getElementById('ventaPrecio').value);
-            const cliente = document.getElementById('ventaCliente').value;
+        // Cargar datos según el tab
+        async function loadTabData(tabName) {
+            switch(tabName) {
+                case 'stock':
+                    loadStock();
+                    break;
+                case 'precios':
+                    loadPrecios();
+                    break;
+                case 'ventas':
+                    loadVentas();
+                    break;
+                case 'compras':
+                    loadCompras();
+                    break;
+            }
+        }
 
-            if (!producto || !cantidad || !precio) {
-                showNotification('⚠️ Completa todos los campos', 'error');
+        // VENTAS
+        async function registrarVenta() {
+            const codigo = document.getElementById('ventasCodigoInput').value;
+            const detalle = document.getElementById('ventasDetalleInput').value;
+            const cantidad = parseInt(document.getElementById('ventasCantidadInput').value);
+            const precioUnitario = parseFloat(document.getElementById('ventasPrecioInput').value);
+            const cliente = document.getElementById('ventasClienteInput').value;
+
+            if (!codigo || !detalle || !cantidad || !precioUnitario) {
+                mostrarError('ventasError', 'Por favor completa todos los campos');
                 return;
             }
 
             try {
-                const response = await fetch(`${API_URL}/ventas`, {
+                const response = await fetch(`${API_BASE}/api/ventas`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ producto, cantidad, precio, cliente })
+                    body: JSON.stringify({ codigo, detalle, cantidad, precioUnitario, cliente })
                 });
 
                 if (response.ok) {
-                    document.getElementById('ventaProducto').value = '';
-                    document.getElementById('ventaCantidad').value = '';
-                    document.getElementById('ventaPrecio').value = '';
-                    document.getElementById('ventaCliente').value = '';
-                    showNotification('✅ Venta registrada');
-                    cargarVentas();
+                    mostrarExito('ventasSuccess', 'Venta registrada correctamente');
+                    document.getElementById('ventasCodigoInput').value = '';
+                    document.getElementById('ventasDetalleInput').value = '';
+                    document.getElementById('ventasCantidadInput').value = '1';
+                    document.getElementById('ventasPrecioInput').value = '';
+                    document.getElementById('ventasClienteInput').value = '';
+                    loadVentas();
+                } else {
+                    mostrarError('ventasError', 'Error al registrar la venta');
                 }
             } catch (error) {
-                showNotification('❌ Error al guardar venta', 'error');
+                mostrarError('ventasError', error.message);
             }
         }
 
-        async function cargarVentas() {
+        async function loadVentas() {
             try {
-                const response = await fetch(`${API_URL}/ventas`);
+                const response = await fetch(`${API_BASE}/api/ventas`);
                 const ventas = await response.json();
-
-                const hoy = new Date().toLocaleDateString('es-AR');
-                const ventasHoy = ventas.filter(v => v.fecha === hoy).length;
-                const totalVentas = ventas.reduce((sum, v) => sum + (v.total || 0), 0);
-
-                document.getElementById('ventasHoy').textContent = ventasHoy;
-                document.getElementById('totalVentas').textContent = '$' + totalVentas.toFixed(2);
 
                 let html = '';
                 if (ventas.length === 0) {
-                    html = '<div class="empty"><div style="font-size: 48px; margin-bottom: 12px;">📭</div><p>Sin ventas aún</p></div>';
+                    html = '<div class="empty-message">No hay ventas registradas</div>';
                 } else {
-                    ventas.reverse().forEach(v => {
-                        html += `
-                            <div class="list-item">
-                                <div class="list-item-info">
-                                    <div class="list-item-title">${v.producto}</div>
-                                    <div class="list-item-desc">${v.cantidad}x @ $${v.precio} ${v.cliente ? `(${v.cliente})` : ''}</div>
-                                    <div class="list-item-desc" style="font-size: 12px;">${v.fecha}</div>
-                                </div>
-                                <div class="list-item-value">$${v.total?.toFixed(2) || '0'}</div>
-                            </div>
-                        `;
+                    html = `<table>
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Detalle</th>
+                                <th>Cantidad</th>
+                                <th>Precio</th>
+                                <th>Total</th>
+                                <th>Cliente</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+                    
+                    let totalHoy = 0;
+                    let countHoy = 0;
+                    const hoy = new Date().toLocaleDateString('es-AR');
+
+                    ventas.forEach(venta => {
+                        const total = venta.cantidad * venta.precioUnitario;
+                        if (venta.fecha === hoy) {
+                            totalHoy += total;
+                            countHoy++;
+                        }
+                        html += `<tr>
+                            <td>${venta.codigo || '-'}</td>
+                            <td>${venta.detalle || '-'}</td>
+                            <td>${venta.cantidad}</td>
+                            <td>$${venta.precioUnitario.toFixed(2)}</td>
+                            <td>$${total.toFixed(2)}</td>
+                            <td>${venta.cliente || '-'}</td>
+                        </tr>`;
                     });
+                    
+                    html += '</tbody></table>';
+                    document.getElementById('ventasHoyCount').textContent = countHoy;
+                    document.getElementById('ventasHoyTotal').textContent = '$' + totalHoy.toFixed(2);
                 }
-                document.getElementById('listaVentas').innerHTML = html;
+                document.getElementById('ventasTableContainer').innerHTML = html;
             } catch (error) {
-                document.getElementById('listaVentas').innerHTML = '<div class="error">Error al cargar ventas</div>';
+                document.getElementById('ventasTableContainer').innerHTML = `<div class="error">Error al cargar: ${error.message}</div>`;
             }
         }
 
-        // ========== COMPRAS ==========
-        async function agregarCompra() {
-            const producto = document.getElementById('compraProducto').value;
-            const cantidad = parseFloat(document.getElementById('compraCantidad').value);
-            const costo = parseFloat(document.getElementById('compraCosto').value);
-            const proveedor = document.getElementById('compraProveedor').value;
+        // COMPRAS
+        async function registrarCompra() {
+            const codigo = document.getElementById('comprasCodigoInput').value;
+            const material = document.getElementById('comprasMaterialInput').value;
+            const cantidad = parseInt(document.getElementById('comprasCantidadInput').value);
+            const costoUnitario = parseFloat(document.getElementById('comprasCostoInput').value);
+            const proveedor = document.getElementById('comprasProveedorInput').value;
 
-            if (!producto || !cantidad || !costo) {
-                showNotification('⚠️ Completa todos los campos', 'error');
+            if (!codigo || !material || !cantidad || !costoUnitario) {
+                mostrarError('comprasError', 'Por favor completa todos los campos');
                 return;
             }
 
             try {
-                const response = await fetch(`${API_URL}/compras`, {
+                const response = await fetch(`${API_BASE}/api/compras`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ producto, cantidad, costo, proveedor })
+                    body: JSON.stringify({ codigo, material, cantidad, costoUnitario, proveedor })
                 });
 
                 if (response.ok) {
-                    document.getElementById('compraProducto').value = '';
-                    document.getElementById('compraCantidad').value = '';
-                    document.getElementById('compraCosto').value = '';
-                    document.getElementById('compraProveedor').value = '';
-                    showNotification('✅ Compra registrada');
-                    cargarCompras();
+                    mostrarExito('comprasSuccess', 'Compra registrada correctamente');
+                    document.getElementById('comprasCodigoInput').value = '';
+                    document.getElementById('comprasMaterialInput').value = '';
+                    document.getElementById('comprasCantidadInput').value = '1';
+                    document.getElementById('comprasCostoInput').value = '';
+                    document.getElementById('comprasProveedorInput').value = '';
+                    loadCompras();
+                } else {
+                    mostrarError('comprasError', 'Error al registrar la compra');
                 }
             } catch (error) {
-                showNotification('❌ Error al guardar compra', 'error');
+                mostrarError('comprasError', error.message);
             }
         }
 
-        async function cargarCompras() {
+        async function loadCompras() {
             try {
-                const response = await fetch(`${API_URL}/compras`);
+                const response = await fetch(`${API_BASE}/api/compras`);
                 const compras = await response.json();
-
-                const totalCompras = compras.length;
-                const gastoTotal = compras.reduce((sum, c) => sum + (c.total || 0), 0);
-
-                document.getElementById('totalCompras').textContent = totalCompras;
-                document.getElementById('gastoTotal').textContent = '$' + gastoTotal.toFixed(2);
 
                 let html = '';
                 if (compras.length === 0) {
-                    html = '<div class="empty"><div style="font-size: 48px; margin-bottom: 12px;">📭</div><p>Sin compras aún</p></div>';
+                    html = '<div class="empty-message">No hay compras registradas</div>';
                 } else {
-                    compras.reverse().forEach(c => {
-                        html += `
-                            <div class="list-item">
-                                <div class="list-item-info">
-                                    <div class="list-item-title">${c.producto}</div>
-                                    <div class="list-item-desc">${c.cantidad}x @ $${c.costo} ${c.proveedor ? `(${c.proveedor})` : ''}</div>
-                                    <div class="list-item-desc" style="font-size: 12px;">${c.fecha}</div>
-                                </div>
-                                <div class="list-item-value">$${c.total?.toFixed(2) || '0'}</div>
-                            </div>
-                        `;
+                    html = `<table>
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Material</th>
+                                <th>Cantidad</th>
+                                <th>Costo</th>
+                                <th>Total</th>
+                                <th>Proveedor</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+                    
+                    compras.forEach(compra => {
+                        const total = compra.cantidad * compra.costoUnitario;
+                        html += `<tr>
+                            <td>${compra.codigo || '-'}</td>
+                            <td>${compra.material || '-'}</td>
+                            <td>${compra.cantidad}</td>
+                            <td>$${compra.costoUnitario.toFixed(2)}</td>
+                            <td>$${total.toFixed(2)}</td>
+                            <td>${compra.proveedor || '-'}</td>
+                        </tr>`;
                     });
+                    
+                    html += '</tbody></table>';
                 }
-                document.getElementById('listaCompras').innerHTML = html;
+                document.getElementById('comprasTableContainer').innerHTML = html;
             } catch (error) {
-                document.getElementById('listaCompras').innerHTML = '<div class="error">Error al cargar compras</div>';
+                document.getElementById('comprasTableContainer').innerHTML = `<div class="error">Error al cargar: ${error.message}</div>`;
             }
         }
 
-        // ========== STOCK ==========
-        async function agregarStock() {
-            const nombre = document.getElementById('stockNombre').value;
-            const cantidad = parseFloat(document.getElementById('stockCantidad').value);
-            const minimo = parseFloat(document.getElementById('stockMinimo').value) || 5;
-
-            if (!nombre || cantidad === '') {
-                showNotification('⚠️ Completa todos los campos', 'error');
-                return;
-            }
-
+        // STOCK
+        async function loadStock() {
             try {
-                const response = await fetch(`${API_URL}/stock`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ nombre, cantidad, minimo })
-                });
-
-                if (response.ok) {
-                    document.getElementById('stockNombre').value = '';
-                    document.getElementById('stockCantidad').value = '';
-                    document.getElementById('stockMinimo').value = '';
-                    showNotification('✅ Artículo agregado');
-                    cargarStock();
-                }
-            } catch (error) {
-                showNotification('❌ Error al guardar artículo', 'error');
-            }
-        }
-
-        async function cargarStock() {
-            try {
-                const response = await fetch(`${API_URL}/stock`);
+                const response = await fetch(`${API_BASE}/api/stock`);
                 const stock = await response.json();
 
                 let html = '';
                 if (stock.length === 0) {
-                    html = '<div class="empty"><div style="font-size: 48px; margin-bottom: 12px;">📭</div><p>Sin artículos aún</p></div>';
+                    html = '<div class="empty-message">No hay items de stock</div>';
                 } else {
-                    stock.reverse().forEach(item => {
-                        const falta = item.cantidad < item.minimo;
-                        html += `
-                            <div class="list-item" style="border-color: ${falta ? 'var(--danger)' : 'var(--border)'}">
-                                <div class="list-item-info">
-                                    <div class="list-item-title">${item.nombre}</div>
-                                    <div class="list-item-desc">Mínimo: ${item.minimo} unidades</div>
-                                </div>
-                                <div class="list-item-value" style="color: ${falta ? 'var(--danger)' : 'var(--success)'}">${item.cantidad}</div>
-                            </div>
-                        `;
+                    html = `<table>
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Detalle</th>
+                                <th>Material</th>
+                                <th>Cantidad</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+                    
+                    stock.forEach(item => {
+                        const rowClass = item.cantidad < (item.minimo || 5) ? ' style="background:#ffebee"' : '';
+                        html += `<tr${rowClass}>
+                            <td>${item.codigo || '-'}</td>
+                            <td>${item.detalle || '-'}</td>
+                            <td>${item.material || '-'}</td>
+                            <td>${item.cantidad}</td>
+                        </tr>`;
                     });
+                    
+                    html += '</tbody></table>';
                 }
-                document.getElementById('listaStock').innerHTML = html;
+                document.getElementById('stockTableContainer').innerHTML = html;
             } catch (error) {
-                document.getElementById('listaStock').innerHTML = '<div class="error">Error al cargar stock</div>';
+                document.getElementById('stockTableContainer').innerHTML = `<div class="error">Error al cargar: ${error.message}</div>`;
             }
         }
 
-        // ========== PRECIOS ==========
-        async function agregarPrecio() {
-            const producto = document.getElementById('precioProducto').value;
-            const costo = parseFloat(document.getElementById('precioCosto').value);
-            const venta = parseFloat(document.getElementById('precioVenta').value);
-
-            if (!producto || !costo || !venta) {
-                showNotification('⚠️ Completa todos los campos', 'error');
-                return;
-            }
-
+        // PRECIOS
+        async function loadPrecios() {
             try {
-                const response = await fetch(`${API_URL}/precios`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ producto, costo, venta })
-                });
-
-                if (response.ok) {
-                    document.getElementById('precioProducto').value = '';
-                    document.getElementById('precioCosto').value = '';
-                    document.getElementById('precioVenta').value = '';
-                    showNotification('✅ Precio guardado');
-                    cargarPrecios();
-                }
-            } catch (error) {
-                showNotification('❌ Error al guardar precio', 'error');
-            }
-        }
-
-        async function cargarPrecios() {
-            try {
-                const response = await fetch(`${API_URL}/precios`);
+                const response = await fetch(`${API_BASE}/api/precios`);
                 const precios = await response.json();
-
-                let margenTotal = 0;
-                if (precios.length > 0) {
-                    margenTotal = precios.reduce((sum, p) => sum + parseFloat(p.margen || 0), 0) / precios.length;
-                }
-                document.getElementById('margenPromedio').textContent = margenTotal.toFixed(1) + '%';
 
                 let html = '';
                 if (precios.length === 0) {
-                    html = '<div class="empty"><div style="font-size: 48px; margin-bottom: 12px;">📭</div><p>Sin precios aún</p></div>';
+                    html = '<div class="empty-message">No hay precios registrados</div>';
                 } else {
-                    precios.reverse().forEach(p => {
-                        html += `
-                            <div class="list-item">
-                                <div class="list-item-info">
-                                    <div class="list-item-title">${p.producto}</div>
-                                    <div class="list-item-desc">Costo: $${p.costo} → Venta: $${p.venta}</div>
-                                    <div class="list-item-desc" style="font-size: 12px;">Margen: ${p.margen}%</div>
-                                </div>
-                            </div>
-                        `;
+                    html = `<table>
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Detalle</th>
+                                <th>Costo Unitario</th>
+                                <th>Precio Venta</th>
+                                <th>Margen %</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+                    
+                    precios.forEach(precio => {
+                        html += `<tr>
+                            <td>${precio.codigo || '-'}</td>
+                            <td>${precio.detalle || '-'}</td>
+                            <td>$${precio.costoUnitario.toFixed(2)}</td>
+                            <td>$${precio.precioVenta.toFixed(2)}</td>
+                            <td>${precio.margen}%</td>
+                        </tr>`;
                     });
+                    
+                    html += '</tbody></table>';
                 }
-                document.getElementById('listaPrecios').innerHTML = html;
+                document.getElementById('preciosTableContainer').innerHTML = html;
             } catch (error) {
-                document.getElementById('listaPrecios').innerHTML = '<div class="error">Error al cargar precios</div>';
+                document.getElementById('preciosTableContainer').innerHTML = `<div class="error">Error al cargar: ${error.message}</div>`;
             }
         }
 
-        // Cargar datos al iniciar
+        // Funciones auxiliares
+        function mostrarError(elementId, mensaje) {
+            const el = document.getElementById(elementId);
+            el.textContent = mensaje;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 4000);
+        }
+
+        function mostrarExito(elementId, mensaje) {
+            const el = document.getElementById(elementId);
+            el.textContent = mensaje;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 4000);
+        }
+
+        // Cargar datos iniciales
         window.addEventListener('load', () => {
-            cargarVentas();
+            loadVentas();
         });
     </script>
 </body>
