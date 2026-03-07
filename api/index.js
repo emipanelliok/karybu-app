@@ -48,6 +48,88 @@ async function getDoc() {
     return doc;
 }
 
+// ENDPOINTS PARA STOCK
+// GET /api/stock - traer todos los items de stock
+app.get('/api/stock', async (req, res) => {
+    try {
+        const doc = await getDoc();
+        const sheet = doc.sheetsByTitle['Stock'];
+        
+        if (!sheet) {
+            return res.status(404).json({ error: 'Sheet "Stock" no encontrada' });
+        }
+        
+        const rows = await sheet.getRows();
+        const stock = rows.map(row => ({
+            codigo: row.get('Codigo'),
+            cantidad: parseInt(row.get('Cantidad')) || 0,
+            material: row.get('Material'),
+            detalle: row.get('Detalle'),
+        }));
+        
+        res.json(stock);
+    } catch (error) {
+        console.error('Error obteniendo stock:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST /api/stock - agregar nuevo item de stock
+app.post('/api/stock', async (req, res) => {
+    try {
+        const { codigo, cantidad, material, detalle } = req.body;
+        
+        if (!codigo || !cantidad) {
+            return res.status(400).json({ error: 'Código y Cantidad son requeridos' });
+        }
+        
+        const doc = await getDoc();
+        const sheet = doc.sheetsByTitle['Stock'];
+        
+        await sheet.addRow({
+            'Codigo': codigo,
+            'Cantidad': cantidad,
+            'Material': material || '',
+            'Detalle': detalle || '',
+        });
+        
+        res.json({ success: true, message: 'Stock agregado' });
+    } catch (error) {
+        console.error('Error agregando stock:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// PUT /api/stock/:codigo - actualizar cantidad de stock
+app.put('/api/stock/:codigo', async (req, res) => {
+    try {
+        const { codigo } = req.params;
+        const { cantidad } = req.body;
+        
+        if (!cantidad) {
+            return res.status(400).json({ error: 'Cantidad es requerida' });
+        }
+        
+        const doc = await getDoc();
+        const sheet = doc.sheetsByTitle['Stock'];
+        const rows = await sheet.getRows();
+        
+        const row = rows.find(r => r.get('Codigo') == codigo);
+        
+        if (!row) {
+            return res.status(404).json({ error: 'Código no encontrado' });
+        }
+        
+        row.set('Cantidad', cantidad);
+        await row.save();
+        
+        res.json({ success: true, message: 'Stock actualizado' });
+    } catch (error) {
+        console.error('Error actualizando stock:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // ========== VENTAS ==========
 app.get('/api/ventas', async (req, res) => {
     try {
