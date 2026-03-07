@@ -285,6 +285,7 @@
     <div class="header">
         <h1>✨ Karybu Accesorios</h1>
         <p>Gestor de ventas y stock</p>
+        <p style="font-size: 11px; opacity: 0.7; margin-top: 8px; letter-spacing: 0.3px;" id="update-indicator">Inicializando...</p>
     </div>
 
     <div class="container">
@@ -828,9 +829,61 @@
         limpiarSugerencias();
     }
 
-    function limpiarSugerencias() {
-        const ul = document.getElementById('sugerencias-clientes');
-        if (ul) ul.remove();
+    // ============= AUTO-REFRESH SYSTEM =============
+    let lastUpdateTime = new Date();
+    const REFRESH_INTERVAL = 120000; // 2 minutos en milisegundos
+    
+    function updateTimeIndicator() {
+        const now = new Date();
+        const secsSinceUpdate = Math.floor((now - lastUpdateTime) / 1000);
+        const secsUntilNext = Math.floor((REFRESH_INTERVAL - ((now - lastUpdateTime) % REFRESH_INTERVAL)) / 1000);
+        
+        let displayText = '';
+        
+        if (secsSinceUpdate < 60) {
+            displayText = `Última actualización: hace ${secsSinceUpdate}s`;
+        } else {
+            const minsSince = Math.floor(secsSinceUpdate / 60);
+            displayText = `Última actualización: hace ${minsSince}m`;
+        }
+        
+        displayText += ` | Próxima: en ${Math.floor(secsUntilNext / 60)}:${(secsUntilNext % 60).toString().padStart(2, '0')}`;
+        
+        const indicator = document.getElementById('update-indicator');
+        if (indicator) {
+            indicator.textContent = displayText;
+        }
     }
+    
+    function autoRefresh() {
+        // Refrescar datos basado en el tab activo
+        const activeTab = document.querySelector('.tab-btn.active');
+        if (!activeTab) return;
+        
+        console.log('🔄 Auto-refresh ejecutado');
+        
+        if (activeTab.textContent.includes('Ventas')) {
+            loadVentas();
+        } else if (activeTab.textContent.includes('Compras')) {
+            loadCompras();
+        } else if (activeTab.textContent.includes('Stock')) {
+            loadStock();
+        } else if (activeTab.textContent.includes('Precios')) {
+            cargarPrecios();
+        } else if (activeTab.textContent.includes('Clientes')) {
+            cargarClientes();
+        }
+        
+        lastUpdateTime = new Date();
+    }
+    
+    // Actualizar indicador cada segundo
+    setInterval(updateTimeIndicator, 1000);
+    
+    // Auto-refresh cada 2 minutos
+    setInterval(autoRefresh, REFRESH_INTERVAL);
+    
+    // Actualizar indicador al cargar la página
+    updateTimeIndicator();
     </script>
 </html>
