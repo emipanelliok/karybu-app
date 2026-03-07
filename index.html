@@ -335,7 +335,36 @@
                     <input type="tel" id="ventasTelefonoInput" placeholder="Teléfono del cliente" readonly style="background-color: #f5f5f5; cursor: not-allowed;">
                 </div>
                 
-                <button class="btn btn-primary" onclick="registrarVenta()">✔ Guardar Venta</button>
+                <button class="btn btn-primary" onclick="cargarProductoAlCarrito()" style="background: #4CAF50;">➕ Cargar Producto</button>
+                <button class="btn btn-primary" onclick="confirmarVenta()" style="background: #2196F3; margin-left: 10px;">✔ Confirmar Venta</button>
+            </div>
+
+            <!-- CARRITO DE PRODUCTOS -->
+            <div id="carritoContainer" style="display:none; margin-top: 30px;">
+                <div class="card">
+                    <h2>📋 Productos en Venta</h2>
+                    <table id="carritoTabla">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Detalle</th>
+                                <th>Cantidad</th>
+                                <th>Precio Unit.</th>
+                                <th>Subtotal</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="carritoBody">
+                        </tbody>
+                        <tfoot>
+                            <tr style="background: #f0f0f0; font-weight: bold;">
+                                <td colspan="4" style="text-align: right;">TOTAL:</td>
+                                <td style="color: #6b2d7f; font-size: 16px;">$<span id="carritoTotal">0.00</span></td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
             </div>
 
             <div class="stats">
@@ -456,7 +485,12 @@
         }
 
         // VENTAS
-        async function registrarVenta() {
+        // ========== CARRITO DE VENTAS ==========
+        let carritoProductos = [];
+        let clienteGlobal = '';
+        let telefonoGlobal = '';
+
+        function cargarProductoAlCarrito() {
             const codigo = document.getElementById('ventasCodigoInput').value;
             const detalle = document.getElementById('ventasDetalleInput').value;
             const cantidad = parseInt(document.getElementById('ventasCantidadInput').value);
@@ -465,31 +499,93 @@
             const telefono = document.getElementById('ventasTelefonoInput').value;
 
             if (!codigo || !detalle || !cantidad || !precioUnitario) {
-                mostrarError('ventasError', 'Por favor completa todos los campos');
+                alert('Por favor completa todos los campos');
+                return;
+            }
+
+            carritoProductos.push({
+                codigo, detalle, cantidad, precioUnitario,
+                subtotal: cantidad * precioUnitario
+            });
+
+            clienteGlobal = cliente;
+            telefonoGlobal = telefono;
+
+            mostrarCarrito();
+
+            // Limpiar formulario
+            document.getElementById('ventasCodigoInput').value = '';
+            document.getElementById('ventasDetalleInput').value = '';
+            document.getElementById('ventasCantidadInput').value = '1';
+            document.getElementById('ventasPrecioInput').value = '';
+            document.getElementById('ventasClienteInput').value = '';
+            document.getElementById('ventasTelefonoInput').value = '';
+
+            alert('✓ Producto agregado');
+        }
+
+        function mostrarCarrito() {
+            const container = document.getElementById('carritoContainer');
+            const tbody = document.getElementById('carritoBody');
+            const totalSpan = document.getElementById('carritoTotal');
+
+            if (carritoProductos.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+
+            container.style.display = 'block';
+            
+            tbody.innerHTML = carritoProductos.map((prod, idx) => `
+                <tr>
+                    <td>${prod.codigo}</td>
+                    <td>${prod.detalle}</td>
+                    <td>${prod.cantidad}</td>
+                    <td>$${prod.precioUnitario.toFixed(2)}</td>
+                    <td>$${prod.subtotal.toFixed(2)}</td>
+                    <td><button onclick="eliminarProducto(${idx})" style="background: red; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">✕</button></td>
+                </tr>
+            `).join('');
+
+            const total = carritoProductos.reduce((sum, p) => sum + p.subtotal, 0);
+            totalSpan.textContent = total.toFixed(2);
+        }
+
+        function eliminarProducto(idx) {
+            carritoProductos.splice(idx, 1);
+            mostrarCarrito();
+        }
+
+        async function confirmarVenta() {
+            if (carritoProductos.length === 0) {
+                alert('Por favor agrega productos');
                 return;
             }
 
             try {
-                const response = await fetch(`${API_BASE}/api/ventas`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ codigo, detalle, cantidad, precioUnitario, cliente, telefono })
-                });
-
-                if (response.ok) {
-                    mostrarExito('ventasSuccess', 'Venta registrada correctamente');
-                    document.getElementById('ventasCodigoInput').value = '';
-                    document.getElementById('ventasDetalleInput').value = '';
-                    document.getElementById('ventasCantidadInput').value = '1';
-                    document.getElementById('ventasPrecioInput').value = '';
-                    document.getElementById('ventasClienteInput').value = '';
-                    document.getElementById('ventasTelefonoInput').value = '';
-                    loadVentas();
-                } else {
-                    mostrarError('ventasError', 'Error al registrar la venta');
+                for (const prod of carritoProductos) {
+                    await fetch(`${API_BASE}/api/ventas`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            codigo: prod.codigo,
+                            detalle: prod.detalle,
+                            cantidad: prod.cantidad,
+                            precioUnitario: prod.precioUnitario,
+                            cliente: clienteGlobal,
+                            telefono: telefonoGlobal
+                        })
+                    });
                 }
+
+                alert('✓ Venta confirmada');
+                carritoProductos = [];
+                clienteGlobal = '';
+                telefonoGlobal = '';
+                mostrarCarrito();
+                loadVentas();
             } catch (error) {
-                mostrarError('ventasError', error.message);
+                alert('Error: ' + error.message);
             }
         }
 
