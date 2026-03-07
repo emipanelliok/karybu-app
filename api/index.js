@@ -61,10 +61,13 @@ app.get('/api/stock', async (req, res) => {
         
         const rows = await sheet.getRows();
         const stock = rows.map(row => ({
-            codigo: row.get('Codigo'),
+            codigo: row.get('Codigo') || '',
             cantidad: parseInt(row.get('Cantidad')) || 0,
-            material: row.get('Material'),
-            detalle: row.get('Detalle'),
+            material: row.get('Material') || '',
+            detalle: row.get('Detalle') || '',
+            // Mapping para compatibilidad con frontend
+            nombre: row.get('Material') || row.get('Codigo') || '',
+            minimo: 5, // valor por defecto si no está en el sheet
         }));
         
         res.json(stock);
@@ -77,9 +80,15 @@ app.get('/api/stock', async (req, res) => {
 // POST /api/stock - agregar nuevo item de stock
 app.post('/api/stock', async (req, res) => {
     try {
-        const { codigo, cantidad, material, detalle } = req.body;
+        const { nombre, cantidad, minimo, codigo, material, detalle } = req.body;
         
-        if (!codigo || !cantidad) {
+        // Si vienen los campos del sheet, usarlos. Si no, mapear desde frontend
+        const codigoFinal = codigo || nombre;
+        const materialFinal = material || nombre;
+        const cantidadFinal = cantidad || 0;
+        const detalleFinal = detalle || '';
+        
+        if (!codigoFinal || cantidadFinal === '') {
             return res.status(400).json({ error: 'Código y Cantidad son requeridos' });
         }
         
@@ -87,10 +96,10 @@ app.post('/api/stock', async (req, res) => {
         const sheet = doc.sheetsByTitle['Stock'];
         
         await sheet.addRow({
-            'Codigo': codigo,
-            'Cantidad': cantidad,
-            'Material': material || '',
-            'Detalle': detalle || '',
+            'Codigo': codigoFinal,
+            'Cantidad': cantidadFinal,
+            'Material': materialFinal,
+            'Detalle': detalleFinal,
         });
         
         res.json({ success: true, message: 'Stock agregado' });
@@ -106,7 +115,7 @@ app.put('/api/stock/:codigo', async (req, res) => {
         const { codigo } = req.params;
         const { cantidad } = req.body;
         
-        if (!cantidad) {
+        if (!cantidad && cantidad !== 0) {
             return res.status(400).json({ error: 'Cantidad es requerida' });
         }
         
