@@ -193,7 +193,10 @@ app.post('/api/ventas', asyncHandler(async (req, res) => {
         'Fecha': fecha
     });
     
-    res.json({ success: true });
+    // ✅ ACTUALIZAR STOCK: RESTAR cantidad (venta negativa)
+    await actualizarStockProducto(doc, codigo, -parseInt(cantidad));
+    
+    res.json({ success: true, mensaje: 'Venta registrada y stock actualizado' });
 }));
 
 // COMPRAS GET ENDPOINT
@@ -220,6 +223,31 @@ app.get('/api/compras', asyncHandler(async (req, res) => {
     res.json(compras);
 }));
 
+// Función auxiliar para actualizar cantidad en Stock
+async function actualizarStockProducto(doc, codigo, cantidadCambio) {
+    try {
+        const sheet = doc.sheetsByTitle['Stock'];
+        if (!sheet) return false;
+        
+        const rows = await sheet.getRows();
+        for (const row of rows) {
+            if (row.get('Código') === codigo) {
+                const cantidadActual = parseInt(row.get('Cantidad')) || 0;
+                const nuevaCantidad = cantidadActual + cantidadCambio; // positivo para compras, negativo para ventas
+                row.set('Cantidad', Math.max(0, nuevaCantidad)); // No puede ser negativo
+                await row.save();
+                console.log(`✅ Stock actualizado: ${codigo} (${cantidadActual} → ${nuevaCantidad})`);
+                return true;
+            }
+        }
+        console.warn(`⚠️ Producto ${codigo} no encontrado en Stock`);
+        return false;
+    } catch (error) {
+        console.error('Error actualizando stock:', error.message);
+        return false;
+    }
+}
+
 // COMPRAS POST ENDPOINT
 app.post('/api/compras', asyncHandler(async (req, res) => {
     const { codigo, material, cantidad, costoUnitario, proveedor } = req.body;
@@ -244,7 +272,10 @@ app.post('/api/compras', asyncHandler(async (req, res) => {
         'Fecha': fecha
     });
     
-    res.json({ success: true });
+    // ✅ ACTUALIZAR STOCK: SUMAR cantidad (compra positiva)
+    await actualizarStockProducto(doc, codigo, parseInt(cantidad));
+    
+    res.json({ success: true, mensaje: 'Compra registrada y stock actualizado' });
 }));
 
 // CLIENTES GET ENDPOINT
