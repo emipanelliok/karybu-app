@@ -447,6 +447,7 @@
                     break;
                 case 'ventas':
                     loadVentas();
+                    cargarProductos();
                     break;
                 case 'compras':
                     loadCompras();
@@ -885,5 +886,66 @@
     
     // Actualizar indicador al cargar la página
     updateTimeIndicator();
+
+    // ============= AUTOCOMPLETE PRODUCTOS =============
+    let productosCache = [];
+
+    async function cargarProductos() {
+        try {
+            const response = await fetch('/api/stock');
+            productosCache = await response.json();
+            configurarAutocompleteProductos();
+        } catch (error) {
+            console.error('Error cargando productos:', error);
+        }
+    }
+
+    function configurarAutocompleteProductos() {
+        const inputCodigo = document.getElementById('ventasCodigoInput');
+        if (!inputCodigo) return;
+        
+        inputCodigo.addEventListener('input', function() {
+            const valor = this.value.toLowerCase().trim();
+            if (valor.length === 0) {
+                limpiarSugerenciasProductos();
+                return;
+            }
+            
+            const sugerencias = productosCache.filter(p => 
+                p.codigo.toLowerCase().includes(valor)
+            );
+            
+            mostrarSugerenciasProductos(sugerencias);
+        });
+    }
+
+    function mostrarSugerenciasProductos(productos) {
+        let ul = document.getElementById('sugerencias-productos');
+        if (!ul) {
+            ul = document.createElement('ul');
+            ul.id = 'sugerencias-productos';
+            ul.style.cssText = 'position: absolute; background: white; border: 1px solid #ccc; border-radius: 4px; max-width: 400px; z-index: 100; list-style: none; padding: 0; margin: 0; max-height: 200px; overflow-y: auto;';
+            document.getElementById('ventasCodigoInput').parentElement.style.position = 'relative';
+            document.getElementById('ventasCodigoInput').parentElement.appendChild(ul);
+        }
+        
+        ul.innerHTML = productos.map(p => `
+            <li style="padding: 10px; cursor: pointer; border-bottom: 1px solid #eee;" onclick="seleccionarProducto('${p.codigo}', '${p.detalle.replace(/'/g, "\'")}')">
+                <strong>${p.codigo}</strong> - ${p.detalle}
+            </li>
+        `).join('');
+    }
+
+    function seleccionarProducto(codigo, detalle) {
+        document.getElementById('ventasCodigoInput').value = codigo;
+        document.getElementById('ventasDetalleInput').value = detalle;
+        limpiarSugerenciasProductos();
+    }
+
+    function limpiarSugerenciasProductos() {
+        const ul = document.getElementById('sugerencias-productos');
+        if (ul) ul.remove();
+    }
+
     </script>
 </html>
