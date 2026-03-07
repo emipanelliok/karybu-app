@@ -48,26 +48,24 @@ async function getDoc() {
     return doc;
 }
 
-// ENDPOINTS PARA STOCK
-// GET /api/stock - traer todos los items de stock
+// ========== STOCK - Leer de la hoja Stock ==========
+// Estructura: A=Código, B=Cantidad, C=Material, D=Detalle, E=Costo unitario, F=Precio de venta
 app.get('/api/stock', async (req, res) => {
     try {
         const doc = await getDoc();
         const sheet = doc.sheetsByTitle['Stock'];
         
         if (!sheet) {
-            return res.status(404).json({ error: 'Sheet "Stock" no encontrada' });
+            return res.status(404).json({ error: 'Hoja "Stock" no encontrada' });
         }
         
         const rows = await sheet.getRows();
         const stock = rows.map(row => ({
-            codigo: row.get('Codigo') || '',
+            codigo: row.get('Código') || '',
             cantidad: parseInt(row.get('Cantidad')) || 0,
             material: row.get('Material') || '',
             detalle: row.get('Detalle') || '',
-            // Mapping para compatibilidad con frontend
-            nombre: row.get('Material') || row.get('Codigo') || '',
-            minimo: 5, // valor por defecto si no está en el sheet
+            minimo: 5 // valor por defecto
         }));
         
         res.json(stock);
@@ -77,87 +75,59 @@ app.get('/api/stock', async (req, res) => {
     }
 });
 
-// POST /api/stock - agregar nuevo item de stock
-app.post('/api/stock', async (req, res) => {
+// ========== PRECIOS - Leer de la hoja Stock ==========
+app.get('/api/precios', async (req, res) => {
     try {
-        const { nombre, cantidad, minimo, codigo, material, detalle } = req.body;
-        
-        // Si vienen los campos del sheet, usarlos. Si no, mapear desde frontend
-        const codigoFinal = codigo || nombre;
-        const materialFinal = material || nombre;
-        const cantidadFinal = cantidad || 0;
-        const detalleFinal = detalle || '';
-        
-        if (!codigoFinal || cantidadFinal === '') {
-            return res.status(400).json({ error: 'Código y Cantidad son requeridos' });
-        }
-        
         const doc = await getDoc();
         const sheet = doc.sheetsByTitle['Stock'];
         
-        await sheet.addRow({
-            'Codigo': codigoFinal,
-            'Cantidad': cantidadFinal,
-            'Material': materialFinal,
-            'Detalle': detalleFinal,
+        if (!sheet) {
+            return res.status(404).json({ error: 'Hoja "Stock" no encontrada' });
+        }
+        
+        const rows = await sheet.getRows();
+        const precios = rows.map(row => {
+            const costoUnitario = parseFloat(row.get('Costo unitario')) || 0;
+            const precioVenta = parseFloat(row.get('Precio de venta')) || 0;
+            const margen = costoUnitario > 0 ? ((precioVenta - costoUnitario) / costoUnitario * 100).toFixed(1) : 0;
+            
+            return {
+                codigo: row.get('Código') || '',
+                detalle: row.get('Detalle') || '',
+                costoUnitario: costoUnitario,
+                precioVenta: precioVenta,
+                margen: margen
+            };
         });
         
-        res.json({ success: true, message: 'Stock agregado' });
+        res.json(precios);
     } catch (error) {
-        console.error('Error agregando stock:', error);
+        console.error('Error obteniendo precios:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// PUT /api/stock/:codigo - actualizar cantidad de stock
-app.put('/api/stock/:codigo', async (req, res) => {
-    try {
-        const { codigo } = req.params;
-        const { cantidad } = req.body;
-        
-        if (!cantidad && cantidad !== 0) {
-            return res.status(400).json({ error: 'Cantidad es requerida' });
-        }
-        
-        const doc = await getDoc();
-        const sheet = doc.sheetsByTitle['Stock'];
-        const rows = await sheet.getRows();
-        
-        const row = rows.find(r => r.get('Codigo') == codigo);
-        
-        if (!row) {
-            return res.status(404).json({ error: 'Código no encontrado' });
-        }
-        
-        row.set('Cantidad', cantidad);
-        await row.save();
-        
-        res.json({ success: true, message: 'Stock actualizado' });
-    } catch (error) {
-        console.error('Error actualizando stock:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// ========== VENTAS ==========
+// ========== VENTAS - Crear hoja aparte para registrar ventas ==========
 app.get('/api/ventas', async (req, res) => {
     try {
         const doc = await getDoc();
         let sheet = doc.sheetsByTitle['Ventas'];
         
         if (!sheet) {
+            // Si no existe, crearla con los headers correctos
             sheet = await doc.addSheet({ title: 'Ventas' });
-            await sheet.setHeaderRow(['Producto', 'Cantidad', 'Precio', 'Total', 'Cliente', 'Fecha']);
+            await sheet.setHeaderRow(['Código', 'Detalle', 'Cantidad', 'Precio Unitario', 'Total', 'Cliente', 'Fecha']);
         }
         
         const rows = await sheet.getRows();
         const ventas = rows.map(row => ({
-            producto: row.get('Producto'),
-            cantidad: parseFloat(row.get('Cantidad')),
-            precio: parseFloat(row.get('Precio')),
-            total: parseFloat(row.get('Total')),
-            cliente: row.get('Cliente'),
-            fecha: row.get('Fecha')
+            codigo: row.get('Código') || '',
+            detalle: row.get('Detalle') || '',
+            cantidad: parseFloat(row.get('Cantidad')) || 0,
+            precioUnitario: parseFloat(row.get('Precio Unitario')) || 0,
+            total: parseFloat(row.get('Total')) || 0,
+            cliente: row.get('Cliente') || '',
+            fecha: row.get('Fecha') || ''
         }));
         
         res.json(ventas);
@@ -169,22 +139,23 @@ app.get('/api/ventas', async (req, res) => {
 
 app.post('/api/ventas', async (req, res) => {
     try {
-        const { producto, cantidad, precio, cliente } = req.body;
+        const { codigo, detalle, cantidad, precioUnitario, cliente } = req.body;
         const doc = await getDoc();
         let sheet = doc.sheetsByTitle['Ventas'];
         
         if (!sheet) {
             sheet = await doc.addSheet({ title: 'Ventas' });
-            await sheet.setHeaderRow(['Producto', 'Cantidad', 'Precio', 'Total', 'Cliente', 'Fecha']);
+            await sheet.setHeaderRow(['Código', 'Detalle', 'Cantidad', 'Precio Unitario', 'Total', 'Cliente', 'Fecha']);
         }
         
-        const total = cantidad * precio;
+        const total = cantidad * precioUnitario;
         const fecha = new Date().toLocaleDateString('es-AR');
         
         await sheet.addRow({
-            'Producto': producto,
+            'Código': codigo,
+            'Detalle': detalle,
             'Cantidad': cantidad,
-            'Precio': precio,
+            'Precio Unitario': precioUnitario,
             'Total': total,
             'Cliente': cliente || '',
             'Fecha': fecha
@@ -197,7 +168,7 @@ app.post('/api/ventas', async (req, res) => {
     }
 });
 
-// ========== COMPRAS ==========
+// ========== COMPRAS - Crear hoja aparte para registrar compras ==========
 app.get('/api/compras', async (req, res) => {
     try {
         const doc = await getDoc();
@@ -205,17 +176,18 @@ app.get('/api/compras', async (req, res) => {
         
         if (!sheet) {
             sheet = await doc.addSheet({ title: 'Compras' });
-            await sheet.setHeaderRow(['Producto', 'Cantidad', 'Costo', 'Total', 'Proveedor', 'Fecha']);
+            await sheet.setHeaderRow(['Código', 'Material', 'Cantidad', 'Costo Unitario', 'Total', 'Proveedor', 'Fecha']);
         }
         
         const rows = await sheet.getRows();
         const compras = rows.map(row => ({
-            producto: row.get('Producto'),
-            cantidad: parseFloat(row.get('Cantidad')),
-            costo: parseFloat(row.get('Costo')),
-            total: parseFloat(row.get('Total')),
-            proveedor: row.get('Proveedor'),
-            fecha: row.get('Fecha')
+            codigo: row.get('Código') || '',
+            material: row.get('Material') || '',
+            cantidad: parseFloat(row.get('Cantidad')) || 0,
+            costoUnitario: parseFloat(row.get('Costo Unitario')) || 0,
+            total: parseFloat(row.get('Total')) || 0,
+            proveedor: row.get('Proveedor') || '',
+            fecha: row.get('Fecha') || ''
         }));
         
         res.json(compras);
@@ -227,133 +199,25 @@ app.get('/api/compras', async (req, res) => {
 
 app.post('/api/compras', async (req, res) => {
     try {
-        const { producto, cantidad, costo, proveedor } = req.body;
+        const { codigo, material, cantidad, costoUnitario, proveedor } = req.body;
         const doc = await getDoc();
         let sheet = doc.sheetsByTitle['Compras'];
         
         if (!sheet) {
             sheet = await doc.addSheet({ title: 'Compras' });
-            await sheet.setHeaderRow(['Producto', 'Cantidad', 'Costo', 'Total', 'Proveedor', 'Fecha']);
+            await sheet.setHeaderRow(['Código', 'Material', 'Cantidad', 'Costo Unitario', 'Total', 'Proveedor', 'Fecha']);
         }
         
-        const total = cantidad * costo;
+        const total = cantidad * costoUnitario;
         const fecha = new Date().toLocaleDateString('es-AR');
         
         await sheet.addRow({
-            'Producto': producto,
+            'Código': codigo,
+            'Material': material,
             'Cantidad': cantidad,
-            'Costo': costo,
+            'Costo Unitario': costoUnitario,
             'Total': total,
             'Proveedor': proveedor || '',
-            'Fecha': fecha
-        });
-        
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// ========== STOCK ==========
-app.get('/api/stock', async (req, res) => {
-    try {
-        const doc = await getDoc();
-        let sheet = doc.sheetsByTitle['Stock'];
-        
-        if (!sheet) {
-            sheet = await doc.addSheet({ title: 'Stock' });
-            await sheet.setHeaderRow(['Nombre', 'Cantidad', 'Mínimo', 'Fecha']);
-        }
-        
-        const rows = await sheet.getRows();
-        const stock = rows.map(row => ({
-            nombre: row.get('Nombre'),
-            cantidad: parseFloat(row.get('Cantidad')),
-            minimo: parseFloat(row.get('Mínimo')),
-            fecha: row.get('Fecha')
-        }));
-        
-        res.json(stock);
-    } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.post('/api/stock', async (req, res) => {
-    try {
-        const { nombre, cantidad, minimo } = req.body;
-        const doc = await getDoc();
-        let sheet = doc.sheetsByTitle['Stock'];
-        
-        if (!sheet) {
-            sheet = await doc.addSheet({ title: 'Stock' });
-            await sheet.setHeaderRow(['Nombre', 'Cantidad', 'Mínimo', 'Fecha']);
-        }
-        
-        const fecha = new Date().toLocaleDateString('es-AR');
-        
-        await sheet.addRow({
-            'Nombre': nombre,
-            'Cantidad': cantidad,
-            'Mínimo': minimo,
-            'Fecha': fecha
-        });
-        
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// ========== PRECIOS ==========
-app.get('/api/precios', async (req, res) => {
-    try {
-        const doc = await getDoc();
-        let sheet = doc.sheetsByTitle['Precios'];
-        
-        if (!sheet) {
-            sheet = await doc.addSheet({ title: 'Precios' });
-            await sheet.setHeaderRow(['Producto', 'Costo', 'Venta', 'Margen', 'Fecha']);
-        }
-        
-        const rows = await sheet.getRows();
-        const precios = rows.map(row => ({
-            producto: row.get('Producto'),
-            costo: parseFloat(row.get('Costo')),
-            venta: parseFloat(row.get('Venta')),
-            margen: row.get('Margen'),
-            fecha: row.get('Fecha')
-        }));
-        
-        res.json(precios);
-    } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.post('/api/precios', async (req, res) => {
-    try {
-        const { producto, costo, venta } = req.body;
-        const doc = await getDoc();
-        let sheet = doc.sheetsByTitle['Precios'];
-        
-        if (!sheet) {
-            sheet = await doc.addSheet({ title: 'Precios' });
-            await sheet.setHeaderRow(['Producto', 'Costo', 'Venta', 'Margen', 'Fecha']);
-        }
-        
-        const margen = ((venta - costo) / costo * 100).toFixed(1);
-        const fecha = new Date().toLocaleDateString('es-AR');
-        
-        await sheet.addRow({
-            'Producto': producto,
-            'Costo': costo,
-            'Venta': venta,
-            'Margen': margen + '%',
             'Fecha': fecha
         });
         
