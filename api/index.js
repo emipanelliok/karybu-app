@@ -105,6 +105,19 @@ app.get('/api/stock', asyncHandler(async (req, res) => {
 }));
 
 // PRECIOS ENDPOINT
+// Función para parsear valores de moneda (ej: $6.600,00 → 6600)
+const parseCurrency = (value) => {
+    if (!value) return 0;
+    const str = String(value).trim();
+    // Remover $ y espacios
+    let cleaned = str.replace(/[$\s]/g, '');
+    // Si tiene formato 6.600,00 (punto de miles, coma de decimal):
+    // remover puntos, cambiar coma por punto
+    cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? 0 : num;
+};
+
 app.get('/api/precios', asyncHandler(async (req, res) => {
     const doc = await getDoc();
     const sheet = doc.sheetsByTitle['Stock'];
@@ -115,8 +128,8 @@ app.get('/api/precios', asyncHandler(async (req, res) => {
     
     const rows = await sheet.getRows();
     const precios = rows.map(row => {
-        const costoUnitario = parseFloat(row.get('Costo Unitario')) || 0;
-        const precioVenta = parseFloat(row.get('Precio Venta')) || 0;
+        const costoUnitario = parseCurrency(row.get('Costo Unitario'));
+        const precioVenta = parseCurrency(row.get('Precio Venta'));
         const margen = costoUnitario > 0 ? ((precioVenta - costoUnitario) / costoUnitario * 100).toFixed(1) : 0;
         
         return {
