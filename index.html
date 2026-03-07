@@ -295,6 +295,7 @@
             <button class="tab-btn" onclick="switchTab('clientes', this)">👥 Clientes</button>
             <button class="tab-btn" onclick="switchTab('stock', this)">📦 Stock</button>
             <button class="tab-btn" onclick="switchTab('precios', this)">💰 Precios</button>
+            <button class="tab-btn" onclick="switchTab('datos', this)">📊 Datos</button>
         </div>
 
         <!-- TAB VENTAS -->
@@ -472,6 +473,8 @@
                     loadStock();
                     break;
                 case 'precios':
+                case 'datos':
+                    cargarAnalíticas();
                     loadPrecios();
                     break;
                 case 'ventas':
@@ -948,6 +951,126 @@
         
         displayText += ` | Próxima: en ${Math.floor(secsUntilNext / 60)}:${(secsUntilNext % 60).toString().padStart(2, '0')}`;
         
+
+        // ========== ANALÍTICAS ==========
+        async function cargarAnalíticas() {
+            try {
+                const response = await fetch('/api/ventas');
+                const ventas = await response.json();
+                
+                if (!ventas || ventas.length === 0) {
+                    return; // Sin datos
+                }
+
+                // Obtener hoy, semana y mes
+                const hoy = new Date();
+                const hace7Días = new Date(hoy.getTime() - 7*24*60*60*1000);
+                const primerDíaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+
+                let totalHoy = 0, totalSemana = 0, totalMes = 0;
+                let productosVendidos = {};
+
+                ventas.forEach(venta => {
+                    const fecha = new Date(venta.fecha);
+                    const cantidad = parseInt(venta.cantidad) || 0;
+                    const total = parseFloat(venta.total) || 0;
+
+                    // Totales por período
+                    if (fecha.toDateString() === hoy.toDateString()) totalHoy += total;
+                    if (fecha >= hace7Días) totalSemana += total;
+                    if (fecha >= primerDíaMes) totalMes += total;
+
+                    // Top productos
+                    const key = venta.detalle || venta.codigo;
+                    if (!productosVendidos[key]) {
+                        productosVendidos[key] = { cantidad: 0, total: 0 };
+                    }
+                    productosVendidos[key].cantidad += cantidad;
+                    productosVendidos[key].total += total;
+                });
+
+                // Mostrar totales
+                document.getElementById('totalHoy').textContent = totalHoy.toFixed(0);
+                document.getElementById('totalSemana').textContent = totalSemana.toFixed(0);
+                document.getElementById('totalMes').textContent = totalMes.toFixed(0);
+                document.getElementById('ticketPromedio').textContent = (totalMes / ventas.length).toFixed(0);
+
+                // Top 5 productos
+                const top5 = Object.entries(productosVendidos)
+                    .sort((a, b) => b[1].cantidad - a[1].cantidad)
+                    .slice(0, 5);
+
+                const topHtml = top5.length > 0 
+                    ? top5.map(([prod, data]) => `
+                        <tr style="border-bottom: 1px solid #eee;">
+                            <td style="padding: 10px;">${prod}</td>
+                            <td style="text-align: center; padding: 10px;">${data.cantidad}</td>
+                            <td style="text-align: right; padding: 10px;">$${data.total.toFixed(0)}</td>
+                        </tr>
+                    `).join('')
+                    : '<tr><td colspan="3" style="text-align: center; padding: 20px; color: #999;">No hay datos</td></tr>';
+
+                document.getElementById('topProductos').innerHTML = topHtml;
+
+                // Stock bajo
+                cargarStockBajo();
+
+                // Ganancias
+                cargarGanancias(ventas);
+            } catch (error) {
+                console.error('Error cargando analíticas:', error);
+            }
+        }
+
+        async function cargarStockBajo() {
+            try {
+                const response = await fetch('/api/stock');
+                const stock = await response.json();
+                
+                const bajo = stock.filter(s => s.cantidad < 5);
+                
+                const html = bajo.length > 0
+                    ? bajo.map(s => `
+                        <tr style="border-bottom: 1px solid #eee; background: ${s.cantidad === 0 ? '#ffebee' : '#fff3e0'};">
+                            <td style="padding: 10px;">${s.codigo}</td>
+                            <td style="padding: 10px;">${s.detalle}</td>
+                            <td style="text-align: center; padding: 10px; font-weight: bold; color: #d32f2f;">${s.cantidad}</td>
+                        </tr>
+                    `).join('')
+                    : '<tr><td colspan="3" style="text-align: center; padding: 20px; color: #999;">Todo bien ✓</td></tr>';
+
+                document.getElementById('stockBajo').innerHTML = html;
+            } catch (error) {
+                console.error('Error cargando stock:', error);
+            }
+        }
+
+        async function cargarGanancias(ventas) {
+            try {
+                const response = await fetch('/api/stock');
+                const stock = await response.json();
+                
+                let gananciaBruta = 0;
+                let costoTotal = 0;
+
+                ventas.forEach(venta => {
+                    const producto = stock.find(s => s.codigo === venta.codigo);
+                    if (producto) {
+                        const costo = (producto.costoUnitario || 0) * parseInt(venta.cantidad);
+                        const venta$ = parseFloat(venta.total) || 0;
+                        gananciaBruta += (venta$ - costo);
+                        costoTotal += costo;
+                    }
+                });
+
+                const margen = costoTotal > 0 ? ((gananciaBruta / (gananciaBruta + costoTotal)) * 100) : 0;
+                
+                document.getElementById('gananciaTotal').textContent = gananciaBruta.toFixed(0);
+                document.getElementById('margenPromedio').textContent = margen.toFixed(1);
+            } catch (error) {
+                console.error('Error cargando ganancias:', error);
+            }
+        }
         const indicator = document.getElementById('update-indicator');
         if (indicator) {
             indicator.textContent = displayText;
