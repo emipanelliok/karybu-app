@@ -10,19 +10,41 @@ app.use(express.static('.'));
 
 const SHEET_ID = '1HNwZQONNZwgCMOIa9Y-TKEOyTRksd6U4eZ4CyMX-icU';
 
+// Obtener credenciales de variables de entorno
+const getCredentials = () => {
+    try {
+        // Si está en Vercel, las credenciales vienen como string JSON en una variable de entorno
+        if (process.env.GOOGLE_SERVICE_ACCOUNT) {
+            return JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
+        }
+        // Si no, intentar usar el archivo local (para desarrollo local)
+        return require('./credentials.json');
+    } catch (error) {
+        console.error('No se encontraron credenciales de Google:', error.message);
+        return null;
+    }
+};
+
 // Función para obtener el doc de Google Sheets
 async function getDoc() {
+    const credentials = getCredentials();
     const doc = new GoogleSpreadsheet(SHEET_ID);
     
-    // Si no hay credenciales, intentar con acceso público
-    try {
-        await doc.loadInfo();
-    } catch (error) {
-        console.log('Intentando con acceso público...');
-        // El sheet debe estar compartido como "Cualquiera con el enlace"
-        await doc.loadInfo();
+    if (credentials) {
+        // Usar autenticación con Service Account
+        const jwt = new JWT({
+            email: credentials.client_email,
+            key: credentials.private_key,
+            scopes: [
+                'https://www.googleapis.com/auth/spreadsheets',
+                'https://www.googleapis.com/auth/drive',
+            ],
+        });
+        
+        doc.useServiceAccountAuth(jwt);
     }
     
+    await doc.loadInfo();
     return doc;
 }
 
