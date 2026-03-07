@@ -31,17 +31,16 @@ async function getDoc() {
     const doc = new GoogleSpreadsheet(SHEET_ID);
     
     if (credentials) {
-        // Usar autenticación con Service Account
-        const jwt = new JWT({
-            email: credentials.client_email,
-            key: credentials.private_key,
-            scopes: [
-                'https://www.googleapis.com/auth/spreadsheets',
-                'https://www.googleapis.com/auth/drive',
-            ],
-        });
-        
-        doc.useServiceAccountAuth(jwt);
+        try {
+            // Usar autenticación con Service Account (método correcto para versión actual)
+            await doc.useServiceAccountAuth({
+                client_email: credentials.client_email,
+                private_key: credentials.private_key,
+            });
+        } catch (error) {
+            console.error('Error en autenticación:', error);
+            throw error;
+        }
     }
     
     await doc.loadInfo();
