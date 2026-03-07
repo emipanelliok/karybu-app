@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { GoogleSpreadsheet } = require('google-spreadsheet');
+const { JWT } = require('google-auth-library');
 
 const app = express();
 app.use(cors());
@@ -12,8 +13,16 @@ const SHEET_ID = '1HNwZQONNZwgCMOIa9Y-TKEOyTRksd6U4eZ4CyMX-icU';
 // Función para obtener el doc de Google Sheets
 async function getDoc() {
     const doc = new GoogleSpreadsheet(SHEET_ID);
-    // Usar autenticación sin credenciales (lectura pública)
-    await doc.loadInfo();
+    
+    // Si no hay credenciales, intentar con acceso público
+    try {
+        await doc.loadInfo();
+    } catch (error) {
+        console.log('Intentando con acceso público...');
+        // El sheet debe estar compartido como "Cualquiera con el enlace"
+        await doc.loadInfo();
+    }
+    
     return doc;
 }
 
