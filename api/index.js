@@ -115,8 +115,8 @@ app.get('/api/precios', asyncHandler(async (req, res) => {
     
     const rows = await sheet.getRows();
     const precios = rows.map(row => {
-        const costoUnitario = parseFloat(row.get('Costo unitario')) || 0;
-        const precioVenta = parseFloat(row.get('Precio de venta')) || 0;
+        const costoUnitario = parseFloat(row.get('Costo Unitario')) || 0;
+        const precioVenta = parseFloat(row.get('Precio Venta')) || 0;
         const margen = costoUnitario > 0 ? ((precioVenta - costoUnitario) / costoUnitario * 100).toFixed(1) : 0;
         
         return {
