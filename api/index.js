@@ -98,6 +98,8 @@ app.get('/api/stock', asyncHandler(async (req, res) => {
         cantidad: parseInt(row.get('Cantidad')) || 0,
         material: row.get('Material') || '',
         detalle: row.get('Detalle') || '',
+        costoUnitario: parseCurrency(row.get('Costo Unitario')),
+        precioVenta: parseCurrency(row.get('Precio Venta')),
         minimo: 5
     }));
     
