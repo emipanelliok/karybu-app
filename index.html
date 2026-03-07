@@ -932,15 +932,16 @@
         }
         
         ul.innerHTML = productos.map(p => `
-            <li style="padding: 10px; cursor: pointer; border-bottom: 1px solid #eee;" onclick="seleccionarProducto('${p.codigo}', '${p.detalle.replace(/'/g, "\'")}')">
-                <strong>${p.codigo}</strong> - ${p.detalle}
+            <li style="padding: 10px; cursor: pointer; border-bottom: 1px solid #eee;" onclick="seleccionarProducto('${p.codigo}', '${p.detalle.replace(/'/g, "\\'")}', ${p.precioVenta})">
+                <strong>${p.codigo}</strong> - ${p.detalle} - $${p.precioVenta.toFixed(2)}
             </li>
         `).join('');
     }
 
-    function seleccionarProducto(codigo, detalle) {
+    function seleccionarProducto(codigo, detalle, precioVenta) {
         document.getElementById('ventasCodigoInput').value = codigo;
         document.getElementById('ventasDetalleInput').value = detalle;
+        document.getElementById('ventasPrecioInput').value = precioVenta || '';
         limpiarSugerenciasProductos();
     }
 
