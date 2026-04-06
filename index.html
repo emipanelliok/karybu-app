@@ -475,7 +475,11 @@ async function api(method, path, body) {
 // ══ UTILS ═══════════════════════════════════════════════════════════════════
 const $ = id => document.getElementById(id);
 const fmt = n => '$' + Math.round(n).toLocaleString('es-AR');
-const fmtDate = s => s ? new Date(s + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }) : '';
+const fmtDate = s => {
+  if (!s) return '';
+  const str = s instanceof Date ? s.toISOString().split('T')[0] : String(s).split('T')[0];
+  return new Date(str + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+};
 
 function toast(msg, duration = 2500) {
   const t = $('toast');
@@ -682,26 +686,32 @@ async function loadDashboard() {
         <div class="card">
           ${historial.map(v => {
             const tel = formatearTelWA(v.telefono);
-            const msgWA = armarMensajeWA(v);
             const itemsTexto = v.items.map(i => `${i.detalle.split('/')[0].trim().slice(0,22)} x${i.cantidad}`).join(', ');
+            const anulada = v.anulada;
             return `
-            <div class="historial-item">
+            <div class="historial-item" style="${anulada ? 'opacity:0.5;' : ''}">
               <div class="hi-top">
                 <div style="flex:1; min-width:0;">
-                  <div class="hi-name">${escapeHtml(v.cliente || 'Venta directa')}</div>
+                  <div class="hi-name" style="${anulada ? 'text-decoration:line-through;' : ''}">${escapeHtml(v.cliente || 'Venta directa')}</div>
                   <div class="hi-meta">${escapeHtml(itemsTexto)}</div>
                 </div>
                 <div style="text-align:right; flex-shrink:0; margin-left:8px;">
-                  <div class="hi-total">${fmt(v.total)}</div>
+                  <div class="hi-total" style="${anulada ? 'text-decoration:line-through;color:var(--muted);' : ''}">${fmt(v.total)}</div>
                   <div style="font-size:10px; margin-top:2px;">
-                    ${v.pagado
-                      ? `<span style="color:var(--success); font-weight:600;">✓ Cobrado</span>`
-                      : `<span style="color:#92400e; font-weight:600;">⏳ Fiado</span>`}
+                    ${anulada
+                      ? `<span style="color:var(--danger); font-weight:600;">✗ Anulada</span>`
+                      : v.pagado
+                        ? `<span style="color:var(--success); font-weight:600;">✓ Cobrado</span>`
+                        : `<span style="color:#92400e; font-weight:600;">⏳ Fiado</span>`}
                     · ${fmtDate(v.fecha)}
                   </div>
                 </div>
               </div>
-              ${tel ? `<a href="https://wa.me/${tel}?text=${encodeURIComponent(armarMensajeWA(v))}" target="_blank" style="display:inline-flex; align-items:center; gap:4px; margin-top:6px; padding:5px 12px; background:#25D366; color:#fff; border-radius:8px; font-size:12px; font-weight:600; text-decoration:none;">💬 Enviar comprobante</a>` : ''}
+              ${!anulada ? `
+              <div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">
+                ${tel ? `<a href="https://wa.me/${tel}?text=${encodeURIComponent(armarMensajeWA(v))}" target="_blank" style="display:inline-flex; align-items:center; gap:4px; padding:5px 10px; background:#25D366; color:#fff; border-radius:8px; font-size:12px; font-weight:600; text-decoration:none;">💬 WhatsApp</a>` : ''}
+                <button onclick="anularVenta('${escapeHtml(v.grupo)}')" style="padding:5px 10px; background:#fee2e2; color:var(--danger); border:none; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer;">✗ Anular</button>
+              </div>` : ''}
             </div>`;
           }).join('')}
         </div>
@@ -1176,6 +1186,16 @@ function armarMensajeWA(f) {
     `   ✦ ${i.detalle.split('/')[0].trim().slice(0, 40)} x${i.cantidad} — ${fmt(i.total)}`
   ).join('\n');
   return `✨ ¡Gracias por comprar en KaryBu! ✨\n\n${nombre}\nTe mando el detalle de tu compra:\n\n${items}\n\n💰 *Total: ${fmt(f.total)}*\n\n¡Fue un placer atenderte! 🛍️💜`;
+}
+
+async function anularVenta(grupo) {
+  if (!confirm('¿Anular esta venta? El stock de los productos va a volver.')) return;
+  try {
+    await api('PUT', '/api/historial/' + grupo + '/anular', {});
+    toast('✓ Venta anulada. Stock restaurado.');
+    await loadProductos();
+    loadDashboard();
+  } catch(e) { toast('❌ ' + e.message); }
 }
 
 async function cobrarFiado(grupo) {

@@ -93,6 +93,7 @@ async function ensureInit() {
     )`;
   await sql`ALTER TABLE ventas ADD COLUMN IF NOT EXISTS pagado BOOLEAN DEFAULT TRUE`;
   await sql`ALTER TABLE ventas ADD COLUMN IF NOT EXISTS venta_grupo VARCHAR(50) DEFAULT ''`;
+  await sql`ALTER TABLE ventas ADD COLUMN IF NOT EXISTS anulada BOOLEAN DEFAULT FALSE`;
 
   await sql`
     CREATE TABLE IF NOT EXISTS compras (
@@ -287,6 +288,8 @@ app.post('/api/ventas', asyncHandler(async (req, res) => {
   res.json({ success: true, grupo, mensaje: 'Venta registrada' });
 }));
 
+const toDateStr = d => d instanceof Date ? d.toISOString().split('T')[0] : (d ? String(d).split('T')[0] : '');
+
 app.get('/api/fiados', asyncHandler(async (req, res) => {
   const sql = getSQL();
   const rows = await sql`
@@ -294,14 +297,14 @@ app.get('/api/fiados', asyncHandler(async (req, res) => {
            SUM(total) as total_grupo,
            json_agg(json_build_object('detalle', detalle, 'cantidad', cantidad, 'precioUnitario', precio_unitario, 'total', total) ORDER BY id) as items
     FROM ventas
-    WHERE pagado = FALSE AND venta_grupo != ''
+    WHERE pagado = FALSE AND venta_grupo != '' AND (anulada IS NULL OR anulada = FALSE)
     GROUP BY venta_grupo, cliente, telefono, fecha, created_at
     ORDER BY created_at DESC`;
   res.json(rows.map(r => ({
     grupo: r.venta_grupo,
     cliente: r.cliente,
     telefono: r.telefono,
-    fecha: r.fecha,
+    fecha: toDateStr(r.fecha),
     total: parseFloat(r.total_grupo),
     items: r.items,
   })));
@@ -316,23 +319,36 @@ app.put('/api/fiados/:grupo/pagar', asyncHandler(async (req, res) => {
 app.get('/api/historial', asyncHandler(async (req, res) => {
   const sql = getSQL();
   const rows = await sql`
-    SELECT venta_grupo, cliente, telefono, fecha, created_at, pagado,
+    SELECT venta_grupo, cliente, telefono, fecha, created_at, pagado, anulada,
            SUM(total) as total_grupo,
-           json_agg(json_build_object('detalle', detalle, 'cantidad', cantidad, 'precioUnitario', precio_unitario, 'total', total) ORDER BY id) as items
+           json_agg(json_build_object('detalle', detalle, 'cantidad', cantidad, 'codigo', codigo, 'precioUnitario', precio_unitario, 'total', total) ORDER BY id) as items
     FROM ventas
     WHERE venta_grupo != ''
-    GROUP BY venta_grupo, cliente, telefono, fecha, created_at, pagado
+    GROUP BY venta_grupo, cliente, telefono, fecha, created_at, pagado, anulada
     ORDER BY created_at DESC
     LIMIT 50`;
   res.json(rows.map(r => ({
     grupo: r.venta_grupo,
     cliente: r.cliente,
     telefono: r.telefono,
-    fecha: r.fecha,
+    fecha: toDateStr(r.fecha),
     pagado: r.pagado,
+    anulada: r.anulada,
     total: parseFloat(r.total_grupo),
     items: r.items,
   })));
+}));
+
+app.put('/api/historial/:grupo/anular', asyncHandler(async (req, res) => {
+  const sql = getSQL();
+  const { grupo } = req.params;
+  const rows = await sql`SELECT codigo, cantidad FROM ventas WHERE venta_grupo = ${grupo} AND (anulada IS NULL OR anulada = FALSE)`;
+  if (rows.length === 0) return res.status(404).json({ error: 'Venta no encontrada o ya anulada' });
+  await sql`UPDATE ventas SET anulada = TRUE WHERE venta_grupo = ${grupo}`;
+  for (const r of rows) {
+    await sql`UPDATE productos SET cantidad = cantidad + ${parseInt(r.cantidad)} WHERE codigo = ${r.codigo}`;
+  }
+  res.json({ success: true });
 }));
 
 // ─── COMPRAS ─────────────────────────────────────────────────────────────────
