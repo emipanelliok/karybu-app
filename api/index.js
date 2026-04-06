@@ -296,13 +296,14 @@ const toDateStr = d => d instanceof Date ? d.toISOString().split('T')[0] : (d ? 
 app.get('/api/fiados', asyncHandler(async (req, res) => {
   const sql = getSQL();
   const rows = await sql`
-    SELECT venta_grupo, cliente, telefono, fecha, created_at,
+    SELECT venta_grupo, cliente, telefono, fecha,
+           MIN(created_at) as created_at,
            SUM(total) as total_grupo,
            json_agg(json_build_object('detalle', detalle, 'cantidad', cantidad, 'precioUnitario', precio_unitario, 'total', total) ORDER BY id) as items
     FROM ventas
     WHERE pagado = FALSE AND venta_grupo != '' AND (anulada IS NULL OR anulada = FALSE)
-    GROUP BY venta_grupo, cliente, telefono, fecha, created_at
-    ORDER BY created_at DESC`;
+    GROUP BY venta_grupo, cliente, telefono, fecha
+    ORDER BY MIN(created_at) DESC`;
   res.json(rows.map(r => ({
     grupo: r.venta_grupo,
     cliente: r.cliente,
@@ -322,13 +323,15 @@ app.put('/api/fiados/:grupo/pagar', asyncHandler(async (req, res) => {
 app.get('/api/historial', asyncHandler(async (req, res) => {
   const sql = getSQL();
   const rows = await sql`
-    SELECT venta_grupo, cliente, telefono, fecha, created_at, pagado, anulada,
+    SELECT venta_grupo, cliente, telefono, fecha,
+           MIN(created_at) as created_at,
+           pagado, anulada,
            SUM(total) as total_grupo,
            json_agg(json_build_object('detalle', detalle, 'cantidad', cantidad, 'codigo', codigo, 'precioUnitario', precio_unitario, 'total', total) ORDER BY id) as items
     FROM ventas
     WHERE venta_grupo != ''
-    GROUP BY venta_grupo, cliente, telefono, fecha, created_at, pagado, anulada
-    ORDER BY created_at DESC
+    GROUP BY venta_grupo, cliente, telefono, fecha, pagado, anulada
+    ORDER BY MIN(created_at) DESC
     LIMIT 50`;
   res.json(rows.map(r => ({
     grupo: r.venta_grupo,
