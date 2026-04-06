@@ -360,6 +360,14 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- Modal duplicado cliente -->
+<div class="modal-overlay" id="modal-duplicado">
+  <div class="modal">
+    <div class="modal-title">Cliente existente</div>
+    <div id="modal-duplicado-body"></div>
+  </div>
+</div>
+
 <!-- Modal cliente -->
 <div class="modal-overlay" id="modal-cliente">
   <div class="modal" style="max-height:85vh; overflow-y:auto;">
@@ -1323,6 +1331,65 @@ async function agregarCliente() {
   const telefono = $('cl-telefono').value.trim();
   const mail = $('cl-mail').value.trim();
   if (!nombre) { toast('El nombre es obligatorio'); return; }
+
+  // Buscar duplicado por nombre o teléfono
+  const telNorm = telefono.replace(/\D/g, '');
+  const duplicado = S.clientes.find(c =>
+    c.nombre.toLowerCase() === nombre.toLowerCase() ||
+    (telNorm && c.telefono && c.telefono.replace(/\D/g, '') === telNorm)
+  );
+
+  if (duplicado) {
+    const razon = duplicado.nombre.toLowerCase() === nombre.toLowerCase()
+      ? `mismo nombre "<strong>${escapeHtml(duplicado.nombre)}</strong>"`
+      : `mismo teléfono (<strong>${escapeHtml(duplicado.telefono)}</strong>)`;
+    $('modal-duplicado-body').innerHTML = `
+      <p style="font-size:14px;margin-bottom:16px;">Ya existe una clienta con ${razon}.</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">
+        ${escapeHtml(duplicado.nombre)}${duplicado.telefono ? ' · ' + escapeHtml(duplicado.telefono) : ''}${duplicado.mail ? ' · ' + escapeHtml(duplicado.mail) : ''}
+      </p>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <button class="btn btn-primary" onclick="unirCliente(${duplicado.id})">Unir con la existente</button>
+        <button class="btn" onclick="crearClienteIgual()" style="background:#f3f4f6;">Crear igual (son distintas)</button>
+        <button class="btn btn-secondary" onclick="cerrarModal('modal-duplicado')">Cancelar</button>
+      </div>`;
+    abrirModal('modal-duplicado');
+    return;
+  }
+
+  await _guardarNuevoCliente(nombre, telefono, mail);
+}
+
+async function unirCliente(id) {
+  const nombre = $('cl-nombre').value.trim();
+  const telefono = $('cl-telefono').value.trim();
+  const mail = $('cl-mail').value.trim();
+  cerrarModal('modal-duplicado');
+  try {
+    const c = S.clientes.find(x => x.id === id);
+    await api('PUT', '/api/clientes/' + id, {
+      nombre: nombre || c.nombre,
+      telefono: telefono || c.telefono,
+      mail: mail || c.mail,
+    });
+    await loadClientes();
+    $('cl-nombre').value = '';
+    $('cl-telefono').value = '';
+    $('cl-mail').value = '';
+    render();
+    toast('✓ Clienta unida y actualizada');
+  } catch(e) { toast('❌ ' + e.message); }
+}
+
+async function crearClienteIgual() {
+  cerrarModal('modal-duplicado');
+  const nombre = $('cl-nombre').value.trim();
+  const telefono = $('cl-telefono').value.trim();
+  const mail = $('cl-mail').value.trim();
+  await _guardarNuevoCliente(nombre, telefono, mail);
+}
+
+async function _guardarNuevoCliente(nombre, telefono, mail) {
   try {
     await api('POST', '/api/clientes', { nombre, telefono, mail });
     await loadClientes();
