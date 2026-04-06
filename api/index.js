@@ -480,6 +480,12 @@ app.get('/api/datos', asyncHandler(async (req, res) => {
   });
 }));
 
+app.post('/api/del-productos-kb24', asyncHandler(async (req, res) => {
+  const sql = getSQL();
+  await sql`DELETE FROM productos`;
+  res.json({ success: true });
+}));
+
 // ─── ERROR HANDLER ───────────────────────────────────────────────────────────
 
 app.use((err, req, res, next) => {
