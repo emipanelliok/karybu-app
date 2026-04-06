@@ -574,9 +574,10 @@ async function loadDashboard() {
   const el = $('dash-content');
   if (!el) return;
   try {
-    const [d, fiados] = await Promise.all([
+    const [d, fiados, historial] = await Promise.all([
       api('GET', '/api/datos'),
       api('GET', '/api/fiados'),
+      api('GET', '/api/historial'),
     ]);
 
     const bajo = S.productos.filter(p => p.cantidad <= p.minimo);
@@ -670,6 +671,37 @@ async function loadDashboard() {
                 <button class="btn btn-success btn-sm" style="flex:1; height:40px; font-size:13px;" onclick="cobrarFiado('${escapeHtml(f.grupo)}')">✓ Cobrado</button>
                 ${tel ? `<a href="https://wa.me/${tel}?text=${encodeURIComponent(msgWA)}" target="_blank" style="flex:1; height:40px; border-radius:8px; background:#25D366; color:#fff; font-size:13px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:5px; text-decoration:none;">💬 WhatsApp</a>` : ''}
               </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>` : ''}
+
+      ${historial.length > 0 ? `
+      <div class="section" style="padding-top:0">
+        <div class="section-title">Ventas recientes</div>
+        <div class="card">
+          ${historial.map(v => {
+            const tel = formatearTelWA(v.telefono);
+            const msgWA = armarMensajeWA(v);
+            const itemsTexto = v.items.map(i => `${i.detalle.split('/')[0].trim().slice(0,22)} x${i.cantidad}`).join(', ');
+            return `
+            <div class="historial-item">
+              <div class="hi-top">
+                <div style="flex:1; min-width:0;">
+                  <div class="hi-name">${escapeHtml(v.cliente || 'Venta directa')}</div>
+                  <div class="hi-meta">${escapeHtml(itemsTexto)}</div>
+                </div>
+                <div style="text-align:right; flex-shrink:0; margin-left:8px;">
+                  <div class="hi-total">${fmt(v.total)}</div>
+                  <div style="font-size:10px; margin-top:2px;">
+                    ${v.pagado
+                      ? `<span style="color:var(--success); font-weight:600;">✓ Cobrado</span>`
+                      : `<span style="color:#92400e; font-weight:600;">⏳ Fiado</span>`}
+                    · ${fmtDate(v.fecha)}
+                  </div>
+                </div>
+              </div>
+              ${tel ? `<a href="https://wa.me/${tel}?text=${encodeURIComponent(armarMensajeWA(v))}" target="_blank" style="display:inline-flex; align-items:center; gap:4px; margin-top:6px; padding:5px 12px; background:#25D366; color:#fff; border-radius:8px; font-size:12px; font-weight:600; text-decoration:none;">💬 Enviar comprobante</a>` : ''}
             </div>`;
           }).join('')}
         </div>

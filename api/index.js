@@ -303,6 +303,28 @@ app.put('/api/fiados/:grupo/pagar', asyncHandler(async (req, res) => {
   res.json({ success: true });
 }));
 
+app.get('/api/historial', asyncHandler(async (req, res) => {
+  const sql = getSQL();
+  const rows = await sql`
+    SELECT venta_grupo, cliente, telefono, fecha, created_at, pagado,
+           SUM(total) as total_grupo,
+           json_agg(json_build_object('detalle', detalle, 'cantidad', cantidad, 'precioUnitario', precio_unitario, 'total', total) ORDER BY id) as items
+    FROM ventas
+    WHERE venta_grupo != ''
+    GROUP BY venta_grupo, cliente, telefono, fecha, created_at, pagado
+    ORDER BY created_at DESC
+    LIMIT 50`;
+  res.json(rows.map(r => ({
+    grupo: r.venta_grupo,
+    cliente: r.cliente,
+    telefono: r.telefono,
+    fecha: r.fecha,
+    pagado: r.pagado,
+    total: parseFloat(r.total_grupo),
+    items: r.items,
+  })));
+}));
+
 // ─── COMPRAS ─────────────────────────────────────────────────────────────────
 
 app.get('/api/compras', asyncHandler(async (req, res) => {
