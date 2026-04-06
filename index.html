@@ -359,6 +359,14 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- Modal detalle venta -->
+<div class="modal-overlay" id="modal-venta">
+  <div class="modal">
+    <div class="modal-title" id="modal-venta-titulo"></div>
+    <div id="modal-venta-body"></div>
+  </div>
+</div>
+
 <!-- Modal pago -->
 <div class="modal-overlay" id="modal-pago">
   <div class="modal">
@@ -474,6 +482,7 @@ const S = {
   telefonoVenta: '',
   editingCodigo: null,
   stockFilter: '',
+  ventasTab: 'nueva',
   comprasTab: 'nueva',
 };
 
@@ -748,6 +757,17 @@ async function loadDashboard() {
 
 // ══ TAB: VENDER ══════════════════════════════════════════════════════════
 function renderVender() {
+  return `
+    <div class="section">
+      <div class="inner-tabs">
+        <button class="inner-tab ${S.ventasTab === 'nueva' ? 'active' : ''}" onclick="S.ventasTab='nueva'; render()">Nueva venta</button>
+        <button class="inner-tab ${S.ventasTab === 'historial' ? 'active' : ''}" onclick="S.ventasTab='historial'; render()">Historial</button>
+      </div>
+    </div>
+    ${S.ventasTab === 'nueva' ? renderNuevaVenta() : '<div id="historial-ventas-content"><div class="section" style="padding-top:0"><div class="empty-state"><div class="es-icon">💰</div><div class="es-text">Cargando...</div></div></div></div>'}`;
+}
+
+function renderNuevaVenta() {
   const carritoHTML = S.carrito.length === 0
     ? `<div class="carrito-empty">Buscá un producto para agregar</div>`
     : S.carrito.map(item => `
@@ -815,6 +835,102 @@ function renderVender() {
       </button>
       <button class="btn btn-danger" onclick="limpiarCarrito()">Cancelar</button>
     </div>` : ''}`;
+}
+
+async function renderHistorialVentas() {
+  try {
+    const ventas = await api('GET', '/api/historial');
+    const el = $('historial-ventas-content');
+    if (!el) return;
+    if (ventas.length === 0) {
+      el.innerHTML = `<div class="section" style="padding-top:0"><div class="empty-state"><div class="es-icon">💰</div><div class="es-text">Sin ventas registradas</div></div></div>`;
+      return;
+    }
+    el.innerHTML = `
+      <div class="section" style="padding-top:0; gap:8px;">
+        <div class="section-title">${ventas.length} venta${ventas.length !== 1 ? 's' : ''}</div>
+        <div class="card">
+          ${ventas.map(v => {
+            const itemsTexto = v.items.map(i => `${i.detalle.split('/')[0].trim().slice(0,22)} x${i.cantidad}`).join(', ');
+            return `
+            <div class="historial-item" style="${v.anulada ? 'opacity:0.45;' : 'cursor:pointer;'}"
+              onclick="${v.anulada ? '' : `abrirDetalleVenta('${escapeHtml(v.grupo)}')`}">
+              <div class="hi-top">
+                <div style="flex:1; min-width:0;">
+                  <div class="hi-name" style="${v.anulada ? 'text-decoration:line-through;' : ''}">${escapeHtml(v.cliente || 'Venta directa')}</div>
+                  <div class="hi-meta">${escapeHtml(itemsTexto)}</div>
+                </div>
+                <div style="text-align:right; flex-shrink:0; margin-left:8px;">
+                  <div class="hi-total" style="${v.anulada ? 'text-decoration:line-through;color:var(--muted);' : ''}">${fmt(v.total)}</div>
+                  <div style="font-size:10px; margin-top:2px;">
+                    ${v.anulada
+                      ? `<span style="color:var(--danger);font-weight:600;">✗ Anulada</span>`
+                      : v.pagado
+                        ? `<span style="color:var(--success);font-weight:600;">✓ Cobrado</span>`
+                        : `<span style="color:#92400e;font-weight:600;">⏳ Fiado</span>`}
+                    · ${fmtDate(v.fecha)}
+                  </div>
+                </div>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+  } catch(e) {
+    const el = $('historial-ventas-content');
+    if (el) el.innerHTML = `<div class="section"><div class="card" style="padding:16px;color:var(--danger)">Error: ${escapeHtml(e.message)}</div></div>`;
+  }
+}
+
+function abrirDetalleVenta(grupo) {
+  api('GET', '/api/historial').then(ventas => {
+    const v = ventas.find(x => x.grupo === grupo);
+    if (!v) return;
+    const tel = formatearTelWA(v.telefono);
+    $('modal-venta-titulo').textContent = v.cliente || 'Venta directa';
+    $('modal-venta-body').innerHTML = `
+      <div style="display:flex; justify-content:space-between; margin-bottom:16px;">
+        <div><div style="font-size:12px;color:var(--muted);">Fecha</div><div style="font-weight:600;">${fmtDate(v.fecha)}</div></div>
+        <div style="text-align:right;"><div style="font-size:12px;color:var(--muted);">Estado</div>
+          <div style="font-weight:600;">${v.pagado ? '<span style="color:var(--success)">✓ Cobrado</span>' : '<span style="color:#92400e">⏳ Fiado</span>'}</div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px;">
+        ${v.items.map(i => `
+          <div style="display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);">
+            <div>
+              <div style="font-size:13px;font-weight:500;">${escapeHtml(i.detalle.split('/')[0].trim())}</div>
+              <div style="font-size:11px;color:var(--muted);">${fmt(i.precioUnitario)} c/u</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:13px;font-weight:700;">x${i.cantidad}</div>
+              <div style="font-size:13px;color:var(--purple);font-weight:700;">${fmt(i.total)}</div>
+            </div>
+          </div>`).join('')}
+        <div style="display:flex;justify-content:space-between;padding:12px 14px;">
+          <div style="font-weight:700;">Total</div>
+          <div style="font-size:18px;font-weight:800;color:var(--purple);">${fmt(v.total)}</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        ${tel ? `<a href="https://wa.me/${tel}?text=${encodeURIComponent(armarMensajeWA(v))}" target="_blank" class="btn" style="background:#25D366;color:#fff;height:48px;font-size:15px;font-weight:600;text-decoration:none;">💬 Enviar por WhatsApp</a>` : ''}
+        <button class="btn btn-danger" onclick="anularDesdeModal('${escapeHtml(grupo)}')">✗ Anular venta</button>
+        <button class="btn btn-secondary" onclick="cerrarModal('modal-venta')">Cerrar</button>
+      </div>`;
+    abrirModal('modal-venta');
+  });
+}
+
+async function anularDesdeModal(grupo) {
+  if (!confirm('¿Anular esta venta? El stock va a volver.')) return;
+  try {
+    await api('PUT', '/api/historial/' + grupo + '/anular', {});
+    cerrarModal('modal-venta');
+    toast('✓ Venta anulada. Stock restaurado.');
+    await loadProductos();
+    renderHistorialVentas();
+    loadDashboard();
+  } catch(e) { toast('❌ ' + e.message); }
 }
 
 function onSearchProducto() {
@@ -1235,6 +1351,11 @@ async function cobrarFiado(grupo) {
 // ══ RENDER OVERRIDE (async tabs) ══════════════════════════════════════════
 const _renderSync = render;
 window.render = function() {
+  if (S.tab === 'vender' && S.ventasTab === 'historial') {
+    _renderSync();
+    setTimeout(renderHistorialVentas, 0);
+    return;
+  }
   if (S.tab === 'compras' && S.comprasTab === 'historial') {
     renderHistorialCompras().then(html => {
       const el = $('main-content');
