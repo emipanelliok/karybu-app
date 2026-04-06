@@ -519,6 +519,13 @@ app.get('/api/datos', asyncHandler(async (req, res) => {
   });
 }));
 
+app.post('/api/clear-stock-karybu2024', asyncHandler(async (req, res) => {
+  const sql = getSQL();
+  await sql`TRUNCATE TABLE productos RESTART IDENTITY`;
+  initialized = true; // evitar re-seed
+  res.json({ success: true });
+}));
+
 // ─── ERROR HANDLER ───────────────────────────────────────────────────────────
 
 app.use((err, req, res, next) => {
