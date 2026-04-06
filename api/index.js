@@ -519,6 +519,15 @@ app.get('/api/datos', asyncHandler(async (req, res) => {
   });
 }));
 
+// ─── RESET (TEMPORAL) ────────────────────────────────────────────────────────
+
+app.post('/api/reset-todo', asyncHandler(async (req, res) => {
+  const sql = getSQL();
+  await sql`TRUNCATE TABLE ventas, compras, clientes, productos RESTART IDENTITY`;
+  initialized = false;
+  res.json({ success: true, mensaje: 'Todo borrado' });
+}));
+
 // ─── ERROR HANDLER ───────────────────────────────────────────────────────────
 
 app.use((err, req, res, next) => {
