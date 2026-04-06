@@ -25,7 +25,7 @@ function parseCookies(header = '') {
 }
 
 function requireAuth(req, res, next) {
-  const open = ['/login', '/logout', '/health', '/reset-todo-karybu2024'];
+  const open = ['/login', '/logout', '/health'];
   if (open.includes(req.path)) return next();
   const cookies = parseCookies(req.headers.cookie);
   if (AUTH_PASS && cookies.karybu_auth === makeToken(AUTH_USER, AUTH_PASS)) return next();
@@ -517,15 +517,6 @@ app.get('/api/datos', asyncHandler(async (req, res) => {
       total: parseFloat(r.total),
     })),
   });
-}));
-
-// ─── RESET (TEMPORAL) ────────────────────────────────────────────────────────
-
-app.post('/api/reset-todo-karybu2024', asyncHandler(async (req, res) => {
-  const sql = getSQL();
-  await sql`TRUNCATE TABLE ventas, compras, clientes, productos RESTART IDENTITY`;
-  initialized = false;
-  res.json({ success: true, mensaje: 'Todo borrado' });
 }));
 
 // ─── ERROR HANDLER ───────────────────────────────────────────────────────────
