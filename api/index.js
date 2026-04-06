@@ -118,45 +118,6 @@ async function ensureInit() {
       created_at TIMESTAMP DEFAULT NOW()
     )`;
 
-  // Seed products (only if empty)
-  const [{ count }] = await sql`SELECT COUNT(*) as count FROM productos`;
-  if (parseInt(count) === 0) {
-    const productos = [
-      { codigo: '16',    cantidad: 1,  material: 'BRONCE',         detalle: 'AROS BRONCE VARIOS MODELOS (26170)',                                              costo: 6600,  precio: 17000 },
-      { codigo: '34',    cantidad: 1,  material: 'PLATA LAMINADA', detalle: 'CADENA MIXPER',                                                                   costo: 6300,  precio: 17000 },
-      { codigo: '44',    cantidad: 1,  material: 'ACERO',          detalle: 'ARO AQD ARGOLLA CLIC CON DIJE INFLADO / ARO ACERO DORADO COLGANTE CORAZON',       costo: 4100,  precio: 10250 },
-      { codigo: '48',    cantidad: 1,  material: 'ACERO',          detalle: 'ARO AQP ARGOLLA INFLADA PASANTE / ARO GOTAS GRANDE / ARO CON PERLA / ARO BLANCO-DORADO INFLADO / ARO QUIRURGICO FLOR STRASS', costo: 3600, precio: 9000 },
-      { codigo: '99',    cantidad: 1,  material: 'FANTASIA',       detalle: 'SET CADENA DORADA C/DIJE CORAZON+AROS / AROS INFLADOS PERNO / HEBILLA METAL / ARO ESPIRAL / ARO ARGOLLA ACERO', costo: 4100, precio: 10500 },
-      { codigo: '110',   cantidad: 4,  material: 'ACERO',          detalle: 'AROS ARGOLLA VARIOS: BOMBE CALADA / PIERCING / CINTA MICROPAVE / INFLADA / CEREZA STRASS / ARGOLLA STRASS / COLGANTE ESTRELLA', costo: 3800, precio: 0 },
-      { codigo: '121',   cantidad: 1,  material: 'BRONCE',         detalle: 'AROS BRONCE VARIOS MODELOS (26760-26761-26109-26759-5733)',                       costo: 5700,  precio: 15000 },
-      { codigo: '122',   cantidad: 3,  material: 'BRONCE',         detalle: 'ANILLO BRONCE BAÑADO C/STRASS REGULABLE / ANILLO BRONCE BAÑADO C/STRASS MICROPAVE', costo: 3900, precio: 10000 },
-      { codigo: '125',   cantidad: 1,  material: 'PLATA LAMINADA', detalle: 'PULSERA LAMINADA EN PLATA TIPO PANDORA FLEXIBLE - PULSERA ZIRCONIA',             costo: 12500, precio: 32000 },
-      { codigo: '131',   cantidad: 3,  material: 'PLATA LAMINADA', detalle: 'CHARM DE PLATA LAMINADA (PRECIO POR UNIDAD)',                                    costo: 6600,  precio: 0 },
-      { codigo: '149',   cantidad: 2,  material: 'ACERO',          detalle: 'ARO ACERO ARGOLLA CON STRASS / ARO ESPIGA STRASS / ARO BLANCO DOBLE CON STRASS / ARO BLANCO-DORADO CANASTA', costo: 3300, precio: 8500 },
-      { codigo: '150',   cantidad: 1,  material: 'ACERO',          detalle: 'ARO ARGOLLAS / ARO ACERO BLANCO ARGOLLA 626C / ARO ACERO DORADO FLOR CON STRASS 675B', costo: 2400, precio: 0 },
-      { codigo: '153',   cantidad: 1,  material: 'ACERO',          detalle: 'ARO VAQUITA DE SAN ANTONIO / ARO CEREZA / ARO BOLITA PLATEADA / ARO CON BRILLITO (MARIPOSA-TREBOL-LUNA-CORAZON) / ARO ESTRELLA ENGARZADA', costo: 1100, precio: 4000 },
-      { codigo: '154',   cantidad: 1,  material: 'ACERO',          detalle: 'ARO ACERO CORAZON ENGARZADO DORADO / ARO BOLITA PLATEADA CON STRASS',             costo: 1200,  precio: 4000 },
-      { codigo: '155',   cantidad: 3,  material: 'ACERO',          detalle: 'ARO ARGOLLA CRUZ CRUZADA / ARO ABRIDOR BLANCO CEREZA / ARO TREPADOR BOLITAS / ARO ARGOLLAS BLANCO VARIOS TAMAÑOS', costo: 2700, precio: 0 },
-      { codigo: '157',   cantidad: 4,  material: 'ACERO',          detalle: 'ARO ABRIDOR VAN CLEEF / ARO ABRIDOR CEREZA-FRUTILLA / ARO ABRIDOR CORAZON-ESTRELLA-MARGARITAS / ARO BLANCO BRIZURA FLOR', costo: 2200, precio: 6000 },
-      { codigo: '158',   cantidad: 2,  material: 'ACERO',          detalle: 'CADENA ACERO BLANCO',                                                             costo: 2900,  precio: 7500 },
-      { codigo: '163',   cantidad: 2,  material: 'ACERO',          detalle: 'DIJE ACERO VARIOS MODELOS',                                                      costo: 3300,  precio: 8300 },
-      { codigo: '171',   cantidad: 1,  material: 'ACERO',          detalle: 'ARO ACERO DORADO CORAZON / ARO ARGOLLA CON STRASS / ARO ARGOLLA BLANCO / ARO ARGOLLA DORADO / ARO ARGOLLA CORAZON', costo: 2600, precio: 6500 },
-      { codigo: '172',   cantidad: 1,  material: 'ACERO',          detalle: 'ARO ARGOLLA COLGANTE CON CUBIC',                                                 costo: 3200,  precio: 8000 },
-      { codigo: '173',   cantidad: 1,  material: 'ACERO',          detalle: 'ARGOLLA GRANDE PASANTE 106C / ARGOLLA ACERO BLANCO 433C',                        costo: 4000,  precio: 10000 },
-      { codigo: '182/1', cantidad: 2,  material: 'ACERO',          detalle: 'ARO QUIRURGICO ESTRELLA COLGANTE / ARO STRASS DOBLE / ARO CORAZON DOBLE / ARO QUIRURGICO CON STRASS', costo: 3100, precio: 8000 },
-      { codigo: '185',   cantidad: 1,  material: 'ACERO',          detalle: 'ANILLO ACERO BLANCO VARIOS MODELOS -680C-688C',                                  costo: 1600,  precio: 0 },
-      { codigo: '186',   cantidad: 6,  material: 'ACERO',          detalle: 'ANILLO ACERO QUIRURGICO VARIOS MODELOS',                                         costo: 2000,  precio: 6000 },
-      { codigo: '170',   cantidad: 1,  material: 'BRONCE',         detalle: 'ARO DE BRONCE (SANDIA, ANANA, UVA)',                                             costo: 3700,  precio: 10000 },
-    ];
-
-    for (const p of productos) {
-      await sql`
-        INSERT INTO productos (codigo, cantidad, material, detalle, costo_unitario, precio_venta)
-        VALUES (${p.codigo}, ${p.cantidad}, ${p.material}, ${p.detalle}, ${p.costo}, ${p.precio})
-        ON CONFLICT (codigo) DO NOTHING`;
-    }
-  }
-
   initialized = true;
 }
 
