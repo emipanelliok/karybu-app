@@ -25,7 +25,7 @@ function parseCookies(header = '') {
 }
 
 function requireAuth(req, res, next) {
-  const open = ['/api/login', '/api/logout', '/api/health'];
+  const open = ['/login', '/logout', '/health'];
   if (open.includes(req.path)) return next();
   const cookies = parseCookies(req.headers.cookie);
   if (AUTH_PASS && cookies.karybu_auth === makeToken(AUTH_USER, AUTH_PASS)) return next();
