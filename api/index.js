@@ -1,344 +1,370 @@
 const express = require('express');
 const cors = require('cors');
-const { GoogleSpreadsheet } = require('google-spreadsheet');
+const { neon } = require('@neondatabase/serverless');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.static('.'));
 
-const SHEET_ID = '1HNwZQONNZwgCMOIa9Y-TKEOyTRksd6U4eZ4CyMX-icU';
-
-// Obtener credenciales de variables de entorno
-const getCredentials = () => {
-    try {
-        console.log('=== CREDENCIALES DEBUG ===');
-        console.log('GOOGLE_SERVICE_ACCOUNT exists:', !!process.env.GOOGLE_SERVICE_ACCOUNT);
-        console.log('GOOGLE_SERVICE_ACCOUNT type:', typeof process.env.GOOGLE_SERVICE_ACCOUNT);
-        console.log('GOOGLE_SERVICE_ACCOUNT length:', process.env.GOOGLE_SERVICE_ACCOUNT ? process.env.GOOGLE_SERVICE_ACCOUNT.length : 'null');
-        
-        // Log primeros 100 caracteres
-        if (process.env.GOOGLE_SERVICE_ACCOUNT) {
-            console.log('First 100 chars:', process.env.GOOGLE_SERVICE_ACCOUNT.substring(0, 100));
-        }
-        
-        // Log todas las env vars que contienen GOOGLE
-        const googleVars = Object.keys(process.env).filter(k => k.includes('GOOGLE'));
-        console.log('Variables con GOOGLE:', googleVars);
-        
-        if (process.env.GOOGLE_SERVICE_ACCOUNT) {
-            return JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
-        }
-        return null;
-    } catch (error) {
-        console.error('Error parsing credentials:', error.message);
-        console.error('Error stack:', error.stack);
-        return null;
-    }
+const getSQL = () => {
+  const url = process.env.POSTGRES_URL || process.env.DATABASE_URL;
+  if (!url) throw new Error('No database URL configured');
+  return neon(url);
 };
 
-// Función para obtener el doc de Google Sheets
-async function getDoc() {
-    const credentials = getCredentials();
-    const doc = new GoogleSpreadsheet(SHEET_ID);
-    
-    if (credentials) {
-        try {
-            console.log('Intentando autenticar con serviceAccountAuth...');
-            // En versión 4.1.1, el método correcto es useServiceAccountAuth
-            // Pero necesita ser llamado diferente
-            await doc.useServiceAccountAuth(credentials);
-            console.log('✅ Autenticación exitosa');
-        } catch (authError) {
-            console.error('Auth error:', authError.message);
-            console.error('Trying alternative auth method...');
-            // Fallback: intentar con getAuth
-            try {
-                const { GoogleAuth } = require('google-auth-library');
-                const auth = new GoogleAuth({
-                    credentials: credentials,
-                    scopes: ['https://www.googleapis.com/auth/spreadsheets']
-                });
-                doc.auth = auth;
-                console.log('✅ Autenticación alternativa exitosa');
-            } catch (fallbackError) {
-                throw new Error('Google Sheets authentication failed: ' + authError.message);
-            }
-        }
-    } else {
-        throw new Error('No credentials found');
+// ─── INIT ────────────────────────────────────────────────────────────────────
+
+let initialized = false;
+
+async function ensureInit() {
+  if (initialized) return;
+  const sql = getSQL();
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS productos (
+      id SERIAL PRIMARY KEY,
+      codigo VARCHAR(50) UNIQUE NOT NULL,
+      cantidad INTEGER DEFAULT 0,
+      material VARCHAR(100) DEFAULT '',
+      detalle TEXT DEFAULT '',
+      costo_unitario NUMERIC(12,2) DEFAULT 0,
+      precio_venta NUMERIC(12,2) DEFAULT 0,
+      minimo INTEGER DEFAULT 3
+    )`;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS ventas (
+      id SERIAL PRIMARY KEY,
+      codigo VARCHAR(50),
+      detalle TEXT,
+      cantidad INTEGER,
+      precio_unitario NUMERIC(12,2),
+      total NUMERIC(12,2),
+      cliente VARCHAR(200) DEFAULT '',
+      telefono VARCHAR(50) DEFAULT '',
+      fecha DATE DEFAULT CURRENT_DATE,
+      created_at TIMESTAMP DEFAULT NOW()
+    )`;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS compras (
+      id SERIAL PRIMARY KEY,
+      codigo VARCHAR(50),
+      material VARCHAR(100),
+      cantidad INTEGER,
+      costo_unitario NUMERIC(12,2),
+      total NUMERIC(12,2),
+      proveedor VARCHAR(200) DEFAULT '',
+      fecha DATE DEFAULT CURRENT_DATE,
+      created_at TIMESTAMP DEFAULT NOW()
+    )`;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS clientes (
+      id SERIAL PRIMARY KEY,
+      nombre VARCHAR(200) NOT NULL,
+      telefono VARCHAR(50) DEFAULT '',
+      mail VARCHAR(200) DEFAULT '',
+      direccion TEXT DEFAULT '',
+      created_at TIMESTAMP DEFAULT NOW()
+    )`;
+
+  // Seed products (only if empty)
+  const [{ count }] = await sql`SELECT COUNT(*) as count FROM productos`;
+  if (parseInt(count) === 0) {
+    const productos = [
+      { codigo: '16',    cantidad: 1,  material: 'BRONCE',         detalle: 'AROS BRONCE VARIOS MODELOS (26170)',                                              costo: 6600,  precio: 17000 },
+      { codigo: '34',    cantidad: 1,  material: 'PLATA LAMINADA', detalle: 'CADENA MIXPER',                                                                   costo: 6300,  precio: 17000 },
+      { codigo: '44',    cantidad: 1,  material: 'ACERO',          detalle: 'ARO AQD ARGOLLA CLIC CON DIJE INFLADO / ARO ACERO DORADO COLGANTE CORAZON',       costo: 4100,  precio: 10250 },
+      { codigo: '48',    cantidad: 1,  material: 'ACERO',          detalle: 'ARO AQP ARGOLLA INFLADA PASANTE / ARO GOTAS GRANDE / ARO CON PERLA / ARO BLANCO-DORADO INFLADO / ARO QUIRURGICO FLOR STRASS', costo: 3600, precio: 9000 },
+      { codigo: '99',    cantidad: 1,  material: 'FANTASIA',       detalle: 'SET CADENA DORADA C/DIJE CORAZON+AROS / AROS INFLADOS PERNO / HEBILLA METAL / ARO ESPIRAL / ARO ARGOLLA ACERO', costo: 4100, precio: 10500 },
+      { codigo: '110',   cantidad: 4,  material: 'ACERO',          detalle: 'AROS ARGOLLA VARIOS: BOMBE CALADA / PIERCING / CINTA MICROPAVE / INFLADA / CEREZA STRASS / ARGOLLA STRASS / COLGANTE ESTRELLA', costo: 3800, precio: 0 },
+      { codigo: '121',   cantidad: 1,  material: 'BRONCE',         detalle: 'AROS BRONCE VARIOS MODELOS (26760-26761-26109-26759-5733)',                       costo: 5700,  precio: 15000 },
+      { codigo: '122',   cantidad: 3,  material: 'BRONCE',         detalle: 'ANILLO BRONCE BAÑADO C/STRASS REGULABLE / ANILLO BRONCE BAÑADO C/STRASS MICROPAVE', costo: 3900, precio: 10000 },
+      { codigo: '125',   cantidad: 1,  material: 'PLATA LAMINADA', detalle: 'PULSERA LAMINADA EN PLATA TIPO PANDORA FLEXIBLE - PULSERA ZIRCONIA',             costo: 12500, precio: 32000 },
+      { codigo: '131',   cantidad: 3,  material: 'PLATA LAMINADA', detalle: 'CHARM DE PLATA LAMINADA (PRECIO POR UNIDAD)',                                    costo: 6600,  precio: 0 },
+      { codigo: '149',   cantidad: 2,  material: 'ACERO',          detalle: 'ARO ACERO ARGOLLA CON STRASS / ARO ESPIGA STRASS / ARO BLANCO DOBLE CON STRASS / ARO BLANCO-DORADO CANASTA', costo: 3300, precio: 8500 },
+      { codigo: '150',   cantidad: 1,  material: 'ACERO',          detalle: 'ARO ARGOLLAS / ARO ACERO BLANCO ARGOLLA 626C / ARO ACERO DORADO FLOR CON STRASS 675B', costo: 2400, precio: 0 },
+      { codigo: '153',   cantidad: 1,  material: 'ACERO',          detalle: 'ARO VAQUITA DE SAN ANTONIO / ARO CEREZA / ARO BOLITA PLATEADA / ARO CON BRILLITO (MARIPOSA-TREBOL-LUNA-CORAZON) / ARO ESTRELLA ENGARZADA', costo: 1100, precio: 4000 },
+      { codigo: '154',   cantidad: 1,  material: 'ACERO',          detalle: 'ARO ACERO CORAZON ENGARZADO DORADO / ARO BOLITA PLATEADA CON STRASS',             costo: 1200,  precio: 4000 },
+      { codigo: '155',   cantidad: 3,  material: 'ACERO',          detalle: 'ARO ARGOLLA CRUZ CRUZADA / ARO ABRIDOR BLANCO CEREZA / ARO TREPADOR BOLITAS / ARO ARGOLLAS BLANCO VARIOS TAMAÑOS', costo: 2700, precio: 0 },
+      { codigo: '157',   cantidad: 4,  material: 'ACERO',          detalle: 'ARO ABRIDOR VAN CLEEF / ARO ABRIDOR CEREZA-FRUTILLA / ARO ABRIDOR CORAZON-ESTRELLA-MARGARITAS / ARO BLANCO BRIZURA FLOR', costo: 2200, precio: 6000 },
+      { codigo: '158',   cantidad: 2,  material: 'ACERO',          detalle: 'CADENA ACERO BLANCO',                                                             costo: 2900,  precio: 7500 },
+      { codigo: '163',   cantidad: 2,  material: 'ACERO',          detalle: 'DIJE ACERO VARIOS MODELOS',                                                      costo: 3300,  precio: 8300 },
+      { codigo: '171',   cantidad: 1,  material: 'ACERO',          detalle: 'ARO ACERO DORADO CORAZON / ARO ARGOLLA CON STRASS / ARO ARGOLLA BLANCO / ARO ARGOLLA DORADO / ARO ARGOLLA CORAZON', costo: 2600, precio: 6500 },
+      { codigo: '172',   cantidad: 1,  material: 'ACERO',          detalle: 'ARO ARGOLLA COLGANTE CON CUBIC',                                                 costo: 3200,  precio: 8000 },
+      { codigo: '173',   cantidad: 1,  material: 'ACERO',          detalle: 'ARGOLLA GRANDE PASANTE 106C / ARGOLLA ACERO BLANCO 433C',                        costo: 4000,  precio: 10000 },
+      { codigo: '182/1', cantidad: 2,  material: 'ACERO',          detalle: 'ARO QUIRURGICO ESTRELLA COLGANTE / ARO STRASS DOBLE / ARO CORAZON DOBLE / ARO QUIRURGICO CON STRASS', costo: 3100, precio: 8000 },
+      { codigo: '185',   cantidad: 1,  material: 'ACERO',          detalle: 'ANILLO ACERO BLANCO VARIOS MODELOS -680C-688C',                                  costo: 1600,  precio: 0 },
+      { codigo: '186',   cantidad: 6,  material: 'ACERO',          detalle: 'ANILLO ACERO QUIRURGICO VARIOS MODELOS',                                         costo: 2000,  precio: 6000 },
+      { codigo: '170',   cantidad: 1,  material: 'BRONCE',         detalle: 'ARO DE BRONCE (SANDIA, ANANA, UVA)',                                             costo: 3700,  precio: 10000 },
+    ];
+
+    for (const p of productos) {
+      await sql`
+        INSERT INTO productos (codigo, cantidad, material, detalle, costo_unitario, precio_venta)
+        VALUES (${p.codigo}, ${p.cantidad}, ${p.material}, ${p.detalle}, ${p.costo}, ${p.precio})
+        ON CONFLICT (codigo) DO NOTHING`;
     }
-    
-    try {
-        await doc.loadInfo();
-        console.log('✅ Sheet info cargado correctamente');
-    } catch (loadError) {
-        console.error('LoadInfo error:', loadError.message);
-        throw new Error('Could not load sheet info: ' + loadError.message);
-    }
-    
-    return doc;
+  }
+
+  initialized = true;
 }
 
-// Error handler middleware
-const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+const asyncHandler = (fn) => async (req, res, next) => {
+  try {
+    await ensureInit();
+    await fn(req, res, next);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+};
 
-// STOCK ENDPOINT
+// ─── HEALTH ──────────────────────────────────────────────────────────────────
+
+app.get('/api/health', asyncHandler(async (req, res) => {
+  res.json({ status: 'ok', db: 'neon' });
+}));
+
+// ─── STOCK ───────────────────────────────────────────────────────────────────
+
 app.get('/api/stock', asyncHandler(async (req, res) => {
-    const doc = await getDoc();
-    const sheet = doc.sheetsByTitle['Stock'];
-    
-    if (!sheet) {
-        return res.status(404).json({ error: 'Stock sheet not found' });
-    }
-    
-    const rows = await sheet.getRows();
-    const stock = rows.map(row => ({
-        codigo: row.get('Código') || '',
-        cantidad: parseInt(row.get('Cantidad')) || 0,
-        material: row.get('Material') || '',
-        detalle: row.get('Detalle') || '',
-        costoUnitario: parseCurrency(row.get('Costo Unitario')),
-        precioVenta: parseCurrency(row.get('Precio Venta')),
-        minimo: 5
-    }));
-    
-    res.json(stock);
+  const sql = getSQL();
+  const rows = await sql`
+    SELECT codigo, cantidad, material, detalle, costo_unitario, precio_venta, minimo
+    FROM productos ORDER BY codigo`;
+  res.json(rows.map(r => ({
+    codigo: r.codigo,
+    cantidad: r.cantidad,
+    material: r.material,
+    detalle: r.detalle,
+    costoUnitario: parseFloat(r.costo_unitario),
+    precioVenta: parseFloat(r.precio_venta),
+    minimo: r.minimo,
+  })));
 }));
 
-// PRECIOS ENDPOINT
-// Función para parsear valores de moneda (ej: $6.600,00 → 6600)
-const parseCurrency = (value) => {
-    if (!value) return 0;
-    const str = String(value).trim();
-    // Remover $ y espacios
-    let cleaned = str.replace(/[$\s]/g, '');
-    // Si tiene formato 6.600,00 (punto de miles, coma de decimal):
-    // remover puntos, cambiar coma por punto
-    cleaned = cleaned.replace(/\./g, '').replace(',', '.');
-    const num = parseFloat(cleaned);
-    return isNaN(num) ? 0 : num;
-};
-
-app.get('/api/precios', asyncHandler(async (req, res) => {
-    const doc = await getDoc();
-    const sheet = doc.sheetsByTitle['Stock'];
-    
-    if (!sheet) {
-        return res.status(404).json({ error: 'Stock sheet not found' });
-    }
-    
-    const rows = await sheet.getRows();
-    const precios = rows.map(row => {
-        const costoUnitario = parseCurrency(row.get('Costo Unitario'));
-        const precioVenta = parseCurrency(row.get('Precio Venta'));
-        const margen = costoUnitario > 0 ? ((precioVenta - costoUnitario) / costoUnitario * 100).toFixed(1) : 0;
-        
-        return {
-            codigo: row.get('Código') || '',
-            detalle: row.get('Detalle') || '',
-            costoUnitario: costoUnitario,
-            precioVenta: precioVenta,
-            margen: margen
-        };
-    });
-    
-    res.json(precios);
+app.put('/api/stock/:codigo', asyncHandler(async (req, res) => {
+  const sql = getSQL();
+  const { cantidad, precioVenta, costoUnitario } = req.body;
+  if (cantidad !== undefined) {
+    await sql`UPDATE productos SET cantidad = ${cantidad} WHERE codigo = ${req.params.codigo}`;
+  }
+  if (precioVenta !== undefined) {
+    await sql`UPDATE productos SET precio_venta = ${precioVenta} WHERE codigo = ${req.params.codigo}`;
+  }
+  if (costoUnitario !== undefined) {
+    await sql`UPDATE productos SET costo_unitario = ${costoUnitario} WHERE codigo = ${req.params.codigo}`;
+  }
+  res.json({ success: true });
 }));
 
-// VENTAS GET ENDPOINT
+app.post('/api/stock', asyncHandler(async (req, res) => {
+  const sql = getSQL();
+  const { codigo, cantidad, material, detalle, costoUnitario, precioVenta } = req.body;
+  await sql`
+    INSERT INTO productos (codigo, cantidad, material, detalle, costo_unitario, precio_venta)
+    VALUES (${codigo}, ${cantidad || 0}, ${material || ''}, ${detalle || ''}, ${costoUnitario || 0}, ${precioVenta || 0})
+    ON CONFLICT (codigo) DO UPDATE SET
+      cantidad = EXCLUDED.cantidad,
+      material = EXCLUDED.material,
+      detalle = EXCLUDED.detalle,
+      costo_unitario = EXCLUDED.costo_unitario,
+      precio_venta = EXCLUDED.precio_venta`;
+  res.json({ success: true });
+}));
+
+// ─── VENTAS ──────────────────────────────────────────────────────────────────
+
 app.get('/api/ventas', asyncHandler(async (req, res) => {
-    const doc = await getDoc();
-    let sheet = doc.sheetsByTitle['Ventas'];
-    
-    if (!sheet) {
-        sheet = await doc.addSheet({ title: 'Ventas' });
-        await sheet.setHeaderRow(['Código', 'Detalle', 'Cantidad', 'Precio Unitario', 'Total', 'Cliente', 'Fecha']);
-    }
-    
-    const rows = await sheet.getRows();
-    const ventas = rows.map(row => ({
-        codigo: row.get('Código') || '',
-        detalle: row.get('Detalle') || '',
-        cantidad: parseFloat(row.get('Cantidad')) || 0,
-        precioUnitario: parseFloat(row.get('Precio Unitario')) || 0,
-        total: parseFloat(row.get('Total')) || 0,
-        cliente: row.get('Cliente') || '',
-        fecha: row.get('Fecha') || ''
-    }));
-    
-    res.json(ventas);
+  const sql = getSQL();
+  const { desde, hasta } = req.query;
+  let rows;
+  if (desde && hasta) {
+    rows = await sql`
+      SELECT * FROM ventas WHERE fecha BETWEEN ${desde} AND ${hasta}
+      ORDER BY created_at DESC`;
+  } else {
+    rows = await sql`SELECT * FROM ventas ORDER BY created_at DESC LIMIT 200`;
+  }
+  res.json(rows.map(r => ({
+    id: r.id,
+    codigo: r.codigo,
+    detalle: r.detalle,
+    cantidad: r.cantidad,
+    precioUnitario: parseFloat(r.precio_unitario),
+    total: parseFloat(r.total),
+    cliente: r.cliente,
+    telefono: r.telefono,
+    fecha: r.fecha,
+  })));
 }));
 
-// VENTAS POST ENDPOINT
 app.post('/api/ventas', asyncHandler(async (req, res) => {
-    const { codigo, detalle, cantidad, precioUnitario, cliente, telefono } = req.body;
-    const doc = await getDoc();
-    let sheet = doc.sheetsByTitle['Ventas'];
-    
-    if (!sheet) {
-        sheet = await doc.addSheet({ title: 'Ventas' });
-        await sheet.setHeaderRow(['Código', 'Detalle', 'Cantidad', 'Precio Unitario', 'Total', 'Cliente', 'Teléfono', 'Fecha']);
-    }
-    
+  const sql = getSQL();
+  const { items, cliente = '', telefono = '' } = req.body;
+
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: 'Se requiere al menos un producto' });
+  }
+
+  const fecha = new Date().toISOString().split('T')[0];
+
+  for (const item of items) {
+    const { codigo, detalle, cantidad, precioUnitario } = item;
     const total = cantidad * precioUnitario;
-    const fecha = new Date().toLocaleDateString('es-AR');
-    
-    await sheet.addRow({
-        'Código': codigo,
-        'Detalle': detalle,
-        'Cantidad': cantidad,
-        'Precio Unitario': precioUnitario,
-        'Total': total,
-        'Cliente': cliente || '',
-        'Teléfono': telefono || '',
-        'Fecha': fecha
-    });
-    
-    // ✅ ACTUALIZAR STOCK: RESTAR cantidad (venta negativa)
-    await actualizarStockProducto(doc, codigo, -parseInt(cantidad));
-    
-    res.json({ success: true, mensaje: 'Venta registrada y stock actualizado' });
+    await sql`
+      INSERT INTO ventas (codigo, detalle, cantidad, precio_unitario, total, cliente, telefono, fecha)
+      VALUES (${codigo}, ${detalle || ''}, ${cantidad}, ${precioUnitario}, ${total}, ${cliente}, ${telefono}, ${fecha})`;
+    await sql`
+      UPDATE productos SET cantidad = GREATEST(0, cantidad - ${parseInt(cantidad)})
+      WHERE codigo = ${codigo}`;
+  }
+
+  res.json({ success: true, mensaje: 'Venta registrada' });
 }));
 
-// COMPRAS GET ENDPOINT
+// ─── COMPRAS ─────────────────────────────────────────────────────────────────
+
 app.get('/api/compras', asyncHandler(async (req, res) => {
-    const doc = await getDoc();
-    let sheet = doc.sheetsByTitle['Compras'];
-    
-    if (!sheet) {
-        sheet = await doc.addSheet({ title: 'Compras' });
-        await sheet.setHeaderRow(['Código', 'Material', 'Cantidad', 'Costo Unitario', 'Total', 'Proveedor', 'Fecha']);
-    }
-    
-    const rows = await sheet.getRows();
-    const compras = rows.map(row => ({
-        codigo: row.get('Código') || '',
-        material: row.get('Material') || '',
-        cantidad: parseFloat(row.get('Cantidad')) || 0,
-        costoUnitario: parseFloat(row.get('Costo Unitario')) || 0,
-        total: parseFloat(row.get('Total')) || 0,
-        proveedor: row.get('Proveedor') || '',
-        fecha: row.get('Fecha') || ''
-    }));
-    
-    res.json(compras);
+  const sql = getSQL();
+  const rows = await sql`SELECT * FROM compras ORDER BY created_at DESC LIMIT 200`;
+  res.json(rows.map(r => ({
+    id: r.id,
+    codigo: r.codigo,
+    material: r.material,
+    cantidad: r.cantidad,
+    costoUnitario: parseFloat(r.costo_unitario),
+    total: parseFloat(r.total),
+    proveedor: r.proveedor,
+    fecha: r.fecha,
+  })));
 }));
 
-// Función auxiliar para actualizar cantidad en Stock
-async function actualizarStockProducto(doc, codigo, cantidadCambio) {
-    try {
-        const sheet = doc.sheetsByTitle['Stock'];
-        if (!sheet) return false;
-        
-        const rows = await sheet.getRows();
-        for (const row of rows) {
-            if (row.get('Código') === codigo) {
-                const cantidadActual = parseInt(row.get('Cantidad')) || 0;
-                const nuevaCantidad = cantidadActual + cantidadCambio; // positivo para compras, negativo para ventas
-                row.set('Cantidad', Math.max(0, nuevaCantidad)); // No puede ser negativo
-                await row.save();
-                console.log(`✅ Stock actualizado: ${codigo} (${cantidadActual} → ${nuevaCantidad})`);
-                return true;
-            }
-        }
-        console.warn(`⚠️ Producto ${codigo} no encontrado en Stock`);
-        return false;
-    } catch (error) {
-        console.error('Error actualizando stock:', error.message);
-        return false;
-    }
-}
-
-// COMPRAS POST ENDPOINT
 app.post('/api/compras', asyncHandler(async (req, res) => {
-    const { codigo, material, cantidad, costoUnitario, proveedor } = req.body;
-    const doc = await getDoc();
-    let sheet = doc.sheetsByTitle['Compras'];
-    
-    if (!sheet) {
-        sheet = await doc.addSheet({ title: 'Compras' });
-        await sheet.setHeaderRow(['Código', 'Material', 'Cantidad', 'Costo Unitario', 'Total', 'Proveedor', 'Fecha']);
-    }
-    
-    const total = cantidad * costoUnitario;
-    const fecha = new Date().toLocaleDateString('es-AR');
-    
-    await sheet.addRow({
-        'Código': codigo,
-        'Material': material,
-        'Cantidad': cantidad,
-        'Costo Unitario': costoUnitario,
-        'Total': total,
-        'Proveedor': proveedor || '',
-        'Fecha': fecha
-    });
-    
-    // ✅ ACTUALIZAR STOCK: SUMAR cantidad (compra positiva)
-    await actualizarStockProducto(doc, codigo, parseInt(cantidad));
-    
-    res.json({ success: true, mensaje: 'Compra registrada y stock actualizado' });
+  const sql = getSQL();
+  const { codigo, material, cantidad, costoUnitario, proveedor } = req.body;
+  const total = cantidad * (costoUnitario || 0);
+  const fecha = new Date().toISOString().split('T')[0];
+
+  await sql`
+    INSERT INTO compras (codigo, material, cantidad, costo_unitario, total, proveedor, fecha)
+    VALUES (${codigo}, ${material || ''}, ${cantidad}, ${costoUnitario || 0}, ${total}, ${proveedor || ''}, ${fecha})`;
+
+  await sql`
+    UPDATE productos
+    SET cantidad = cantidad + ${parseInt(cantidad)}, costo_unitario = ${costoUnitario || 0}
+    WHERE codigo = ${codigo}`;
+
+  res.json({ success: true, mensaje: 'Compra registrada y stock actualizado' });
 }));
 
-// CLIENTES GET ENDPOINT
+// ─── CLIENTES ────────────────────────────────────────────────────────────────
+
 app.get('/api/clientes', asyncHandler(async (req, res) => {
-    const doc = await getDoc();
-    let sheet = doc.sheetsByTitle['Clientes'];
-    
-    if (!sheet) {
-        return res.json([]);
-    }
-    
-    const rows = await sheet.getRows();
-    const clientes = rows.map(row => ({
-        nombre: row.get('Nombre') || '',
-        telefono: row.get('Teléfono') || '',
-        mail: row.get('Mail') || '',
-        direccion: row.get('Dirección') || ''
-    }));
-    
-    res.json(clientes);
+  const sql = getSQL();
+  const rows = await sql`SELECT * FROM clientes ORDER BY nombre`;
+  res.json(rows.map(r => ({
+    id: r.id,
+    nombre: r.nombre,
+    telefono: r.telefono,
+    mail: r.mail,
+    direccion: r.direccion,
+  })));
 }));
 
-// CLIENTES POST ENDPOINT
 app.post('/api/clientes', asyncHandler(async (req, res) => {
-    const { nombre, telefono, mail, direccion } = req.body;
-    const doc = await getDoc();
-    let sheet = doc.sheetsByTitle['Clientes'];
-    
-    if (!sheet) {
-        sheet = await doc.addSheet({ title: 'Clientes' });
-        await sheet.setHeaderRow(['Nombre', 'Teléfono', 'Mail', 'Dirección']);
-    }
-    
-    await sheet.addRow({
-        'Nombre': nombre || '',
-        'Teléfono': telefono || '',
-        'Mail': mail || '',
-        'Dirección': direccion || ''
-    });
-    
-    res.json({ success: true, mensaje: 'Cliente agregado' });
+  const sql = getSQL();
+  const { nombre, telefono, mail, direccion } = req.body;
+  if (!nombre) return res.status(400).json({ error: 'Nombre requerido' });
+  const [row] = await sql`
+    INSERT INTO clientes (nombre, telefono, mail, direccion)
+    VALUES (${nombre}, ${telefono || ''}, ${mail || ''}, ${direccion || ''})
+    RETURNING *`;
+  res.json({ success: true, cliente: row });
 }));
 
-// Error handler
-app.use((err, req, res, next) => {
-    console.error('API Error:', err);
-    res.status(500).json({ 
-        error: err.message || 'Internal server error',
-        details: process.env.NODE_ENV === 'development' ? err.stack : undefined
-    });
-});
+// ─── DATOS / ANALYTICS ───────────────────────────────────────────────────────
 
-// Health check
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok' });
+app.get('/api/datos', asyncHandler(async (req, res) => {
+  const sql = getSQL();
+
+  const [hoy] = await sql`
+    SELECT COALESCE(SUM(total), 0) as total, COUNT(*) as cantidad
+    FROM ventas WHERE fecha = CURRENT_DATE`;
+
+  const [semana] = await sql`
+    SELECT COALESCE(SUM(total), 0) as total, COUNT(*) as cantidad
+    FROM ventas WHERE fecha >= CURRENT_DATE - INTERVAL '7 days'`;
+
+  const [mes] = await sql`
+    SELECT COALESCE(SUM(total), 0) as total, COUNT(*) as cantidad
+    FROM ventas WHERE fecha >= CURRENT_DATE - INTERVAL '30 days'`;
+
+  const topProductos = await sql`
+    SELECT codigo, detalle, SUM(cantidad) as total_unidades, SUM(total) as total_pesos
+    FROM ventas
+    WHERE fecha >= CURRENT_DATE - INTERVAL '30 days'
+    GROUP BY codigo, detalle
+    ORDER BY total_unidades DESC
+    LIMIT 5`;
+
+  const stockBajo = await sql`
+    SELECT codigo, detalle, cantidad, minimo FROM productos
+    WHERE cantidad <= minimo ORDER BY cantidad ASC`;
+
+  const [ganancia] = await sql`
+    SELECT
+      COALESCE(SUM(v.total), 0) as ingresos,
+      COALESCE(SUM(v.cantidad * p.costo_unitario), 0) as costos
+    FROM ventas v
+    LEFT JOIN productos p ON v.codigo = p.codigo
+    WHERE v.fecha >= CURRENT_DATE - INTERVAL '30 days'`;
+
+  const ventasPorDia = await sql`
+    SELECT fecha::text, SUM(total) as total
+    FROM ventas
+    WHERE fecha >= CURRENT_DATE - INTERVAL '7 days'
+    GROUP BY fecha ORDER BY fecha`;
+
+  res.json({
+    hoy: { total: parseFloat(hoy.total), cantidad: parseInt(hoy.cantidad) },
+    semana: { total: parseFloat(semana.total), cantidad: parseInt(semana.cantidad) },
+    mes: { total: parseFloat(mes.total), cantidad: parseInt(mes.cantidad) },
+    topProductos: topProductos.map(r => ({
+      codigo: r.codigo,
+      detalle: r.detalle,
+      totalUnidades: parseInt(r.total_unidades),
+      totalPesos: parseFloat(r.total_pesos),
+    })),
+    stockBajo: stockBajo.map(r => ({
+      codigo: r.codigo,
+      detalle: r.detalle,
+      cantidad: r.cantidad,
+      minimo: r.minimo,
+    })),
+    ganancia: {
+      ingresos: parseFloat(ganancia.ingresos),
+      costos: parseFloat(ganancia.costos),
+      neta: parseFloat(ganancia.ingresos) - parseFloat(ganancia.costos),
+    },
+    ventasPorDia: ventasPorDia.map(r => ({
+      fecha: r.fecha,
+      total: parseFloat(r.total),
+    })),
+  });
+}));
+
+// ─── ERROR HANDLER ───────────────────────────────────────────────────────────
+
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ error: err.message });
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Karybu running on port ${PORT}`));
 
 module.exports = app;
-// Force redeploy

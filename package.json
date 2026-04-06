@@ -1,8 +1,8 @@
 {
   "name": "karybu-app",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Karybu Accesorios - Gestor de ventas y stock",
-  "main": "index.js",
+  "main": "api/index.js",
   "scripts": {
     "start": "node api/index.js",
     "dev": "node api/index.js"
@@ -10,9 +10,6 @@
   "dependencies": {
     "express": "^4.18.2",
     "cors": "^2.8.5",
-    "dotenv": "^16.0.3",
-    "google-auth-library": "^9.0.0",
-    "google-spreadsheet": "^4.1.1"
+    "@neondatabase/serverless": "^0.9.0"
   }
 }
-
