@@ -371,6 +371,11 @@ app.put('/api/clientes/:id', asyncHandler(async (req, res) => {
   const sql = getSQL();
   const { nombre, telefono, mail } = req.body;
   if (!nombre) return res.status(400).json({ error: 'Nombre requerido' });
+  // Si cambió el nombre, reasignar ventas al nuevo nombre
+  const [prev] = await sql`SELECT nombre FROM clientes WHERE id=${req.params.id}`;
+  if (prev && prev.nombre !== nombre) {
+    await sql`UPDATE ventas SET cliente=${nombre} WHERE LOWER(cliente) = LOWER(${prev.nombre})`;
+  }
   await sql`UPDATE clientes SET nombre=${nombre}, telefono=${telefono||''}, mail=${mail||''} WHERE id=${req.params.id}`;
   res.json({ success: true });
 }));
