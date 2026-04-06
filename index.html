@@ -639,7 +639,7 @@ async function loadDashboard() {
       : d.topProductos.map((p, i) => `
           <div class="top-item">
             <div class="ti-rank">${i+1}</div>
-            <div class="ti-name">${escapeHtml(p.detalle.split('/')[0].trim().slice(0, 35))}</div>
+            <div class="ti-name"><span style="color:var(--purple);font-weight:700;">${escapeHtml(p.codigo)}</span> · ${escapeHtml(p.detalle.split('/')[0].trim().slice(0, 28))}</div>
             <div class="ti-val">${p.totalUnidades} u</div>
           </div>`).join('');
 
@@ -709,7 +709,7 @@ async function loadDashboard() {
         <div class="section-title" style="color:#92400e;">📋 A cobrar (${fiados.length})</div>
         <div style="display:flex; flex-direction:column; gap:8px;">
           ${fiados.map(f => {
-            const itemsTexto = f.items.map(i => `${i.detalle.split('/')[0].trim().slice(0,25)} x${i.cantidad}`).join(', ');
+            const itemsTexto = f.items.map(i => `[${i.codigo}] ${i.detalle.split('/')[0].trim().slice(0,20)} x${i.cantidad}`).join(', ');
             const tel = formatearTelWA(f.telefono);
             const msgWA = armarMensajeWA(f);
             const dias = Math.floor((new Date() - new Date(f.fecha + 'T12:00:00')) / 86400000);
@@ -740,7 +740,7 @@ async function loadDashboard() {
         <div class="card">
           ${historial.map(v => {
             const tel = formatearTelWA(v.telefono);
-            const itemsTexto = v.items.map(i => `${i.detalle.split('/')[0].trim().slice(0,22)} x${i.cantidad}`).join(', ');
+            const itemsTexto = v.items.map(i => `[${i.codigo}] ${i.detalle.split('/')[0].trim().slice(0,20)} x${i.cantidad}`).join(', ');
             const anulada = v.anulada;
             return `
             <div class="historial-item" style="${anulada ? 'opacity:0.5;' : ''}">
@@ -881,7 +881,7 @@ async function renderHistorialVentas() {
         <div class="section-title">${ventas.length} venta${ventas.length !== 1 ? 's' : ''}</div>
         <div class="card">
           ${ventas.map(v => {
-            const itemsTexto = v.items.map(i => `${i.detalle.split('/')[0].trim().slice(0,22)} x${i.cantidad}`).join(', ');
+            const itemsTexto = v.items.map(i => `[${i.codigo}] ${i.detalle.split('/')[0].trim().slice(0,20)} x${i.cantidad}`).join(', ');
             return `
             <div class="historial-item" style="${v.anulada ? 'opacity:0.45;' : 'cursor:pointer;'}"
               onclick="${v.anulada ? '' : `abrirDetalleVenta('${escapeHtml(v.grupo)}')`}">
