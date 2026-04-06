@@ -360,6 +360,21 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- Modal cliente -->
+<div class="modal-overlay" id="modal-cliente">
+  <div class="modal" style="max-height:85vh; overflow-y:auto;">
+    <div class="modal-title">Cliente</div>
+    <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:16px;">
+      <input type="text" id="mc-nombre" placeholder="Nombre *" style="height:48px; padding:0 14px; border:1.5px solid var(--border); border-radius:10px; font-size:16px;">
+      <input type="tel" id="mc-telefono" placeholder="Teléfono" style="height:48px; padding:0 14px; border:1.5px solid var(--border); border-radius:10px; font-size:16px;">
+      <input type="email" id="mc-mail" placeholder="Email" style="height:48px; padding:0 14px; border:1.5px solid var(--border); border-radius:10px; font-size:16px;">
+      <button class="btn btn-primary" onclick="guardarCliente()">Guardar</button>
+      <button class="btn btn-secondary" onclick="cerrarModal('modal-cliente')">Cancelar</button>
+    </div>
+    <div id="mc-historial"></div>
+  </div>
+</div>
+
 <!-- Modal detalle venta -->
 <div class="modal-overlay" id="modal-venta">
   <div class="modal">
@@ -1014,8 +1029,11 @@ async function confirmarPago(pagado) {
     });
     const total = S.carrito.reduce((s, i) => s + i.qty * i.precio, 0);
     const n = S.carrito.reduce((s, i) => s + i.qty, 0);
+    const hadCliente = !!S.clienteVenta;
     limpiarCarrito();
+    S.ventasTab = 'historial';
     await loadProductos();
+    if (hadCliente) loadClientes();
     if (pagado) {
       toast(`✓ Venta de ${fmt(total)} registrada`);
     } else {
@@ -1269,12 +1287,12 @@ function renderClientes() {
     ? `<div class="empty-state"><div class="es-icon">👥</div><div class="es-text">Sin clientes todavía</div></div>`
     : `<div class="card">
         ${S.clientes.map(c => `
-          <div class="historial-item">
+          <div class="historial-item" onclick="abrirModalCliente(${c.id})" style="cursor:pointer;">
             <div class="hi-top">
               <div class="hi-name">${escapeHtml(c.nombre)}</div>
-              ${c.telefono ? `<a href="tel:${escapeHtml(c.telefono)}" style="font-size:20px;text-decoration:none">📞</a>` : ''}
+              ${c.telefono ? `<a href="tel:${escapeHtml(c.telefono)}" onclick="event.stopPropagation()" style="font-size:20px;text-decoration:none">📞</a>` : ''}
             </div>
-            <div class="hi-meta">${[c.telefono, c.mail, c.direccion].filter(Boolean).map(escapeHtml).join(' · ')}</div>
+            <div class="hi-meta">${[c.telefono, c.mail].filter(Boolean).map(escapeHtml).join(' · ') || '<span style="color:var(--muted)">Tocar para editar</span>'}</div>
           </div>`).join('')}
        </div>`;
 
@@ -1307,6 +1325,55 @@ async function agregarCliente() {
     $('cl-mail').value = '';
     render();
     toast('✓ Cliente agregado');
+  } catch(e) { toast('❌ ' + e.message); }
+}
+
+let _clienteEditId = null;
+
+async function abrirModalCliente(id) {
+  const c = S.clientes.find(x => x.id === id);
+  if (!c) return;
+  _clienteEditId = id;
+  $('mc-nombre').value = c.nombre || '';
+  $('mc-telefono').value = c.telefono || '';
+  $('mc-mail').value = c.mail || '';
+  $('mc-historial').innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0">Cargando historial...</div>';
+  abrirModal('modal-cliente');
+  try {
+    const ventas = await api('GET', '/api/clientes/' + id + '/ventas');
+    if (ventas.length === 0) {
+      $('mc-historial').innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0">Sin ventas registradas</div>';
+    } else {
+      $('mc-historial').innerHTML = `
+        <div style="font-weight:600;font-size:13px;color:var(--purple);margin-bottom:8px;">Historial de compras</div>
+        ${ventas.map(v => `
+          <div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;">
+            <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:600;">
+              <span>${fmtDate(v.fecha)}</span>
+              <span>${fmt(v.total)}</span>
+            </div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;">${v.items.map(i => `${i.cantidad}x ${i.detalle}`).join(', ')}</div>
+          </div>`).join('')}`;
+    }
+  } catch(e) {
+    $('mc-historial').innerHTML = '';
+  }
+}
+
+async function guardarCliente() {
+  if (!_clienteEditId) return;
+  const nombre = $('mc-nombre').value.trim();
+  if (!nombre) { toast('El nombre es obligatorio'); return; }
+  try {
+    await api('PUT', '/api/clientes/' + _clienteEditId, {
+      nombre,
+      telefono: $('mc-telefono').value.trim(),
+      mail: $('mc-mail').value.trim(),
+    });
+    await loadClientes();
+    cerrarModal('modal-cliente');
+    render();
+    toast('✓ Cliente actualizado');
   } catch(e) { toast('❌ ' + e.message); }
 }
 

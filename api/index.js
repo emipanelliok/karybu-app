@@ -403,6 +403,37 @@ app.get('/api/clientes', asyncHandler(async (req, res) => {
   })));
 }));
 
+app.put('/api/clientes/:id', asyncHandler(async (req, res) => {
+  const sql = getSQL();
+  const { nombre, telefono, mail } = req.body;
+  if (!nombre) return res.status(400).json({ error: 'Nombre requerido' });
+  await sql`UPDATE clientes SET nombre=${nombre}, telefono=${telefono||''}, mail=${mail||''} WHERE id=${req.params.id}`;
+  res.json({ success: true });
+}));
+
+app.get('/api/clientes/:id/ventas', asyncHandler(async (req, res) => {
+  const sql = getSQL();
+  const [cliente] = await sql`SELECT nombre FROM clientes WHERE id=${req.params.id}`;
+  if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' });
+  const rows = await sql`
+    SELECT venta_grupo, fecha, created_at, pagado,
+           SUM(total) as total_grupo,
+           json_agg(json_build_object('detalle', detalle, 'cantidad', cantidad, 'codigo', codigo, 'precioUnitario', precio_unitario) ORDER BY id) as items
+    FROM ventas
+    WHERE LOWER(cliente) = LOWER(${cliente.nombre}) AND venta_grupo != ''
+      AND (anulada IS NULL OR anulada = FALSE)
+    GROUP BY venta_grupo, fecha, created_at, pagado
+    ORDER BY created_at DESC
+    LIMIT 20`;
+  res.json(rows.map(r => ({
+    grupo: r.venta_grupo,
+    fecha: toDateStr(r.fecha),
+    pagado: r.pagado,
+    total: parseFloat(r.total_grupo),
+    items: r.items,
+  })));
+}));
+
 app.post('/api/clientes', asyncHandler(async (req, res) => {
   const sql = getSQL();
   const { nombre, telefono, mail, direccion } = req.body;
