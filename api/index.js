@@ -421,20 +421,20 @@ app.get('/api/datos', asyncHandler(async (req, res) => {
 
   const [hoy] = await sql`
     SELECT COALESCE(SUM(total), 0) as total, COUNT(*) as cantidad
-    FROM ventas WHERE fecha = CURRENT_DATE`;
+    FROM ventas WHERE fecha = CURRENT_DATE AND (anulada IS NULL OR anulada = FALSE)`;
 
   const [semana] = await sql`
     SELECT COALESCE(SUM(total), 0) as total, COUNT(*) as cantidad
-    FROM ventas WHERE fecha >= CURRENT_DATE - INTERVAL '7 days'`;
+    FROM ventas WHERE fecha >= CURRENT_DATE - INTERVAL '7 days' AND (anulada IS NULL OR anulada = FALSE)`;
 
   const [mes] = await sql`
     SELECT COALESCE(SUM(total), 0) as total, COUNT(*) as cantidad
-    FROM ventas WHERE fecha >= CURRENT_DATE - INTERVAL '30 days'`;
+    FROM ventas WHERE fecha >= CURRENT_DATE - INTERVAL '30 days' AND (anulada IS NULL OR anulada = FALSE)`;
 
   const topProductos = await sql`
     SELECT codigo, detalle, SUM(cantidad) as total_unidades, SUM(total) as total_pesos
     FROM ventas
-    WHERE fecha >= CURRENT_DATE - INTERVAL '30 days'
+    WHERE fecha >= CURRENT_DATE - INTERVAL '30 days' AND (anulada IS NULL OR anulada = FALSE)
     GROUP BY codigo, detalle
     ORDER BY total_unidades DESC
     LIMIT 5`;
@@ -449,12 +449,12 @@ app.get('/api/datos', asyncHandler(async (req, res) => {
       COALESCE(SUM(v.cantidad * p.costo_unitario), 0) as costos
     FROM ventas v
     LEFT JOIN productos p ON v.codigo = p.codigo
-    WHERE v.fecha >= CURRENT_DATE - INTERVAL '30 days'`;
+    WHERE v.fecha >= CURRENT_DATE - INTERVAL '30 days' AND (v.anulada IS NULL OR v.anulada = FALSE)`;
 
   const ventasPorDia = await sql`
     SELECT fecha::text, SUM(total) as total
     FROM ventas
-    WHERE fecha >= CURRENT_DATE - INTERVAL '7 days'
+    WHERE fecha >= CURRENT_DATE - INTERVAL '7 days' AND (anulada IS NULL OR anulada = FALSE)
     GROUP BY fecha ORDER BY fecha`;
 
   res.json({
