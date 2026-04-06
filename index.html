@@ -1425,7 +1425,7 @@ async function abrirModalCliente(id) {
               <span>${fmtDate(v.fecha)}</span>
               <span>${fmt(v.total)}</span>
             </div>
-            <div style="font-size:12px;color:var(--muted);margin-top:4px;">${v.items.map(i => `${i.cantidad}x ${i.detalle}`).join(', ')}</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;">${v.items.map(i => `[${escapeHtml(i.codigo)}] ${i.cantidad}x ${i.detalle.split('/')[0].trim().slice(0,30)}`).join(' · ')}</div>
           </div>`).join('')}`;
     }
   } catch(e) {
