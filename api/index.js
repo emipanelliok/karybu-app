@@ -25,7 +25,7 @@ function parseCookies(header = '') {
 }
 
 function requireAuth(req, res, next) {
-  const open = ['/login', '/logout', '/health'];
+  const open = ['/login', '/logout', '/health', '/reset-todo-karybu2024'];
   if (open.includes(req.path)) return next();
   const cookies = parseCookies(req.headers.cookie);
   if (AUTH_PASS && cookies.karybu_auth === makeToken(AUTH_USER, AUTH_PASS)) return next();
@@ -521,7 +521,7 @@ app.get('/api/datos', asyncHandler(async (req, res) => {
 
 // ─── RESET (TEMPORAL) ────────────────────────────────────────────────────────
 
-app.post('/api/reset-todo', asyncHandler(async (req, res) => {
+app.post('/api/reset-todo-karybu2024', asyncHandler(async (req, res) => {
   const sql = getSQL();
   await sql`TRUNCATE TABLE ventas, compras, clientes, productos RESTART IDENTITY`;
   initialized = false;
