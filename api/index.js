@@ -196,9 +196,12 @@ app.get('/api/stock', asyncHandler(async (req, res) => {
 
 app.put('/api/stock/:codigo', asyncHandler(async (req, res) => {
   const sql = getSQL();
-  const { detalle, cantidad, precioVenta, costoUnitario } = req.body;
+  const { detalle, material, cantidad, precioVenta, costoUnitario } = req.body;
   if (detalle !== undefined) {
     await sql`UPDATE productos SET detalle = ${detalle} WHERE codigo = ${req.params.codigo}`;
+  }
+  if (material !== undefined) {
+    await sql`UPDATE productos SET material = ${material} WHERE codigo = ${req.params.codigo}`;
   }
   if (cantidad !== undefined) {
     await sql`UPDATE productos SET cantidad = ${cantidad} WHERE codigo = ${req.params.codigo}`;
