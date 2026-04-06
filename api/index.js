@@ -1,11 +1,54 @@
 const express = require('express');
 const cors = require('cors');
+const crypto = require('crypto');
 const { neon } = require('@neondatabase/serverless');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.static('.'));
+
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
+
+const AUTH_USER   = process.env.APP_USERNAME || '';
+const AUTH_PASS   = process.env.APP_PASSWORD || '';
+const AUTH_SECRET = process.env.APP_SECRET   || 'karybu-2024-secret';
+
+function makeToken(u, p) {
+  return crypto.createHmac('sha256', AUTH_SECRET).update(u + ':' + p).digest('hex');
+}
+
+function parseCookies(header = '') {
+  return Object.fromEntries(
+    header.split(';').map(c => c.trim().split('=').map(decodeURIComponent))
+  );
+}
+
+function requireAuth(req, res, next) {
+  const open = ['/api/login', '/api/logout', '/api/health'];
+  if (open.includes(req.path)) return next();
+  const cookies = parseCookies(req.headers.cookie);
+  if (AUTH_PASS && cookies.karybu_auth === makeToken(AUTH_USER, AUTH_PASS)) return next();
+  if (!AUTH_PASS) return next(); // sin contraseña configurada, permitir todo
+  res.status(401).json({ error: 'No autorizado' });
+}
+
+app.use('/api', requireAuth);
+
+app.post('/api/login', (req, res) => {
+  const { username, password } = req.body;
+  if (username === AUTH_USER && password === AUTH_PASS) {
+    const token = makeToken(username, password);
+    res.setHeader('Set-Cookie', `karybu_auth=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`);
+    return res.json({ success: true });
+  }
+  res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
+});
+
+app.post('/api/logout', (req, res) => {
+  res.setHeader('Set-Cookie', 'karybu_auth=; Path=/; Max-Age=0');
+  res.json({ success: true });
+});
 
 const getSQL = () => {
   const url = process.env.POSTGRES_URL || process.env.DATABASE_URL;

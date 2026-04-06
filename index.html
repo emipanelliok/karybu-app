@@ -237,6 +237,30 @@
   </style>
 </head>
 <body>
+<!-- LOGIN SCREEN -->
+<div id="login-screen" style="display:none; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; background:var(--bg); padding:24px;">
+  <div style="width:100%; max-width:360px;">
+    <div style="text-align:center; margin-bottom:32px;">
+      <div style="font-size:48px; margin-bottom:8px;">✦</div>
+      <div style="font-size:28px; font-weight:800; color:var(--gold-dark); letter-spacing:-0.5px;">KaryBu</div>
+      <div style="font-size:14px; color:var(--muted); margin-top:4px;">Accesorios</div>
+    </div>
+    <div class="card" style="padding:24px; display:flex; flex-direction:column; gap:14px;">
+      <div class="input-group">
+        <label>Usuario</label>
+        <input type="text" id="login-user" placeholder="tu usuario" autocomplete="username" autocapitalize="none">
+      </div>
+      <div class="input-group">
+        <label>Contraseña</label>
+        <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"
+          onkeydown="if(event.key==='Enter') doLogin()">
+      </div>
+      <div id="login-error" style="display:none; color:var(--danger); font-size:13px; text-align:center; padding:8px; background:#fee2e2; border-radius:8px;"></div>
+      <button id="login-btn" class="btn btn-primary" onclick="doLogin()">Entrar</button>
+    </div>
+  </div>
+</div>
+
 <div id="app">
   <header>
     <div>
@@ -245,6 +269,7 @@
     </div>
     <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
       <span id="stock-alert-badge" style="display:none" class="badge badge-danger">⚠️ <span id="stock-alert-count"></span></span>
+      <button onclick="doLogout()" style="border:none;background:none;font-size:20px;cursor:pointer;padding:4px;" title="Salir">🚪</button>
     </div>
   </header>
 
@@ -968,6 +993,53 @@ async function renderDatos() {
   }
 }
 
+// ══ AUTH ══════════════════════════════════════════════════════════════════
+
+function showLogin() {
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+function hideLogin() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+}
+
+async function doLogin() {
+  const username = $('login-user').value.trim();
+  const password = $('login-pass').value;
+  const btn = $('login-btn');
+  const err = $('login-error');
+  err.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Entrando...';
+  try {
+    const r = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    if (r.ok) {
+      hideLogin();
+      init();
+    } else {
+      const d = await r.json();
+      err.textContent = d.error || 'Error al ingresar';
+      err.style.display = '';
+    }
+  } catch(e) {
+    err.textContent = 'Error de conexión';
+    err.style.display = '';
+  }
+  btn.disabled = false;
+  btn.textContent = 'Entrar';
+}
+
+async function doLogout() {
+  await fetch('/api/logout', { method: 'POST' });
+  showLogin();
+}
+
 // ══ START ═══════════════════════════════════════════════════════════════
 // Override render for datos tab (async)
 const _render = render;
@@ -987,7 +1059,17 @@ window.render = function() {
   _render();
 };
 
-init();
+// Verificar auth antes de iniciar
+(async function start() {
+  try {
+    const r = await fetch('/api/health');
+    if (r.status === 401) { showLogin(); return; }
+    // health check pasa, pero verificar con stock (protegido)
+    const r2 = await fetch('/api/stock');
+    if (r2.status === 401) { showLogin(); return; }
+    init();
+  } catch(e) { init(); }
+})();
 </script>
 </body>
 </html>
