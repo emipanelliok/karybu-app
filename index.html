@@ -1219,8 +1219,9 @@ async function doLogout() {
   try {
     const r = await fetch('/api/stock');
     if (r.status === 401) { showLogin(); return; }
+    hideLogin();
     init();
-  } catch(e) { init(); }
+  } catch(e) { hideLogin(); init(); }
 })();
 </script>
 </body>
