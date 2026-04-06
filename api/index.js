@@ -380,6 +380,12 @@ app.put('/api/clientes/:id', asyncHandler(async (req, res) => {
   res.json({ success: true });
 }));
 
+app.delete('/api/clientes/:id', asyncHandler(async (req, res) => {
+  const sql = getSQL();
+  await sql`DELETE FROM clientes WHERE id=${req.params.id}`;
+  res.json({ success: true });
+}));
+
 app.get('/api/clientes/:id/ventas', asyncHandler(async (req, res) => {
   const sql = getSQL();
   const [cliente] = await sql`SELECT nombre FROM clientes WHERE id=${req.params.id}`;
