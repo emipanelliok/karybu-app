@@ -435,8 +435,8 @@ app.get('/api/datos', asyncHandler(async (req, res) => {
     LIMIT 5`;
 
   const stockBajo = await sql`
-    SELECT codigo, detalle, cantidad, minimo FROM productos
-    WHERE cantidad <= minimo ORDER BY cantidad ASC`;
+    SELECT codigo, detalle, cantidad FROM productos
+    WHERE cantidad = 0 ORDER BY codigo ASC`;
 
   const [ganancia] = await sql`
     SELECT
@@ -465,7 +465,7 @@ app.get('/api/datos', asyncHandler(async (req, res) => {
     stockBajo: stockBajo.map(r => ({
       codigo: r.codigo,
       detalle: r.detalle,
-      cantidad: r.cantidad,
+      cantidad: 0,
       minimo: r.minimo,
     })),
     ganancia: {
