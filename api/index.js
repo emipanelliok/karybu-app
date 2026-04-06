@@ -87,8 +87,12 @@ async function ensureInit() {
       cliente VARCHAR(200) DEFAULT '',
       telefono VARCHAR(50) DEFAULT '',
       fecha DATE DEFAULT CURRENT_DATE,
-      created_at TIMESTAMP DEFAULT NOW()
+      created_at TIMESTAMP DEFAULT NOW(),
+      pagado BOOLEAN DEFAULT TRUE,
+      venta_grupo VARCHAR(50) DEFAULT ''
     )`;
+  await sql`ALTER TABLE ventas ADD COLUMN IF NOT EXISTS pagado BOOLEAN DEFAULT TRUE`;
+  await sql`ALTER TABLE ventas ADD COLUMN IF NOT EXISTS venta_grupo VARCHAR(50) DEFAULT ''`;
 
   await sql`
     CREATE TABLE IF NOT EXISTS compras (
@@ -250,26 +254,53 @@ app.get('/api/ventas', asyncHandler(async (req, res) => {
 
 app.post('/api/ventas', asyncHandler(async (req, res) => {
   const sql = getSQL();
-  const { items, cliente = '', telefono = '' } = req.body;
+  const { items, cliente = '', telefono = '', pagado = true } = req.body;
 
   if (!items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'Se requiere al menos un producto' });
   }
 
   const fecha = new Date().toISOString().split('T')[0];
+  const grupo = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
   for (const item of items) {
     const { codigo, detalle, cantidad, precioUnitario } = item;
     const total = cantidad * precioUnitario;
     await sql`
-      INSERT INTO ventas (codigo, detalle, cantidad, precio_unitario, total, cliente, telefono, fecha)
-      VALUES (${codigo}, ${detalle || ''}, ${cantidad}, ${precioUnitario}, ${total}, ${cliente}, ${telefono}, ${fecha})`;
+      INSERT INTO ventas (codigo, detalle, cantidad, precio_unitario, total, cliente, telefono, fecha, pagado, venta_grupo)
+      VALUES (${codigo}, ${detalle || ''}, ${cantidad}, ${precioUnitario}, ${total}, ${cliente}, ${telefono}, ${fecha}, ${pagado}, ${grupo})`;
     await sql`
       UPDATE productos SET cantidad = GREATEST(0, cantidad - ${parseInt(cantidad)})
       WHERE codigo = ${codigo}`;
   }
 
-  res.json({ success: true, mensaje: 'Venta registrada' });
+  res.json({ success: true, grupo, mensaje: 'Venta registrada' });
+}));
+
+app.get('/api/fiados', asyncHandler(async (req, res) => {
+  const sql = getSQL();
+  const rows = await sql`
+    SELECT venta_grupo, cliente, telefono, fecha, created_at,
+           SUM(total) as total_grupo,
+           json_agg(json_build_object('detalle', detalle, 'cantidad', cantidad, 'precioUnitario', precio_unitario, 'total', total) ORDER BY id) as items
+    FROM ventas
+    WHERE pagado = FALSE AND venta_grupo != ''
+    GROUP BY venta_grupo, cliente, telefono, fecha, created_at
+    ORDER BY created_at DESC`;
+  res.json(rows.map(r => ({
+    grupo: r.venta_grupo,
+    cliente: r.cliente,
+    telefono: r.telefono,
+    fecha: r.fecha,
+    total: parseFloat(r.total_grupo),
+    items: r.items,
+  })));
+}));
+
+app.put('/api/fiados/:grupo/pagar', asyncHandler(async (req, res) => {
+  const sql = getSQL();
+  await sql`UPDATE ventas SET pagado = TRUE WHERE venta_grupo = ${req.params.grupo}`;
+  res.json({ success: true });
 }));
 
 // ─── COMPRAS ─────────────────────────────────────────────────────────────────

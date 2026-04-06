@@ -356,6 +356,22 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- Modal pago -->
+<div class="modal-overlay" id="modal-pago">
+  <div class="modal">
+    <div class="modal-title">¿Cómo paga?</div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <button class="btn btn-primary" onclick="confirmarPago(true)" style="background:#16a34a;">
+        💵 Pagó ahora
+      </button>
+      <button class="btn" onclick="confirmarPago(false)" style="background:#fef3c7; color:#92400e; height:52px; font-size:16px; font-weight:600;">
+        ⏳ Paga después (fiado)
+      </button>
+      <button class="btn btn-secondary" onclick="cerrarModal('modal-pago')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal editar producto -->
 <div class="modal-overlay" id="modal-producto">
   <div class="modal">
@@ -555,7 +571,10 @@ async function loadDashboard() {
   const el = $('dash-content');
   if (!el) return;
   try {
-    const d = await api('GET', '/api/datos');
+    const [d, fiados] = await Promise.all([
+      api('GET', '/api/datos'),
+      api('GET', '/api/fiados'),
+    ]);
 
     const bajo = S.productos.filter(p => p.cantidad <= p.minimo);
 
@@ -628,6 +647,30 @@ async function loadDashboard() {
           ${topHTML}
         </div>
       </div>
+
+      ${fiados.length > 0 ? `
+      <div class="section" style="padding-top:0">
+        <div class="section-title" style="color:#92400e;">📋 Fiados pendientes (${fiados.length})</div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          ${fiados.map(f => {
+            const itemsTexto = f.items.map(i => `${i.detalle.split('/')[0].trim().slice(0,25)} x${i.cantidad}`).join(', ');
+            const tel = formatearTelWA(f.telefono);
+            const msgWA = armarMensajeWA(f);
+            return `
+            <div class="card" style="padding:14px 16px;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+                <div style="font-size:15px; font-weight:700;">${escapeHtml(f.cliente || 'Sin nombre')}</div>
+                <div style="font-size:17px; font-weight:800; color:var(--purple);">${fmt(f.total)}</div>
+              </div>
+              <div style="font-size:12px; color:var(--muted); margin-bottom:10px;">${escapeHtml(itemsTexto)} · ${fmtDate(f.fecha)}</div>
+              <div style="display:flex; gap:8px;">
+                <button class="btn btn-success btn-sm" style="flex:1; height:40px; font-size:13px;" onclick="cobrarFiado('${escapeHtml(f.grupo)}')">✓ Cobrado</button>
+                ${tel ? `<a href="https://wa.me/${tel}?text=${encodeURIComponent(msgWA)}" target="_blank" style="flex:1; height:40px; border-radius:8px; background:#25D366; color:#fff; font-size:13px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:5px; text-decoration:none;">💬 WhatsApp</a>` : ''}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>` : ''}
 
       ${bajo.length > 0 ? `
       <div class="section" style="padding-top:0">
@@ -769,24 +812,31 @@ function limpiarCarrito() {
   render();
 }
 
-async function confirmarVenta() {
+function confirmarVenta() {
   if (S.carrito.length === 0) return;
-  const btn = document.querySelector('.btn-primary');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Procesando...'; }
+  abrirModal('modal-pago');
+}
+
+async function confirmarPago(pagado) {
+  cerrarModal('modal-pago');
   try {
     await api('POST', '/api/ventas', {
       items: S.carrito.map(i => ({ codigo: i.codigo, detalle: i.detalle, cantidad: i.qty, precioUnitario: i.precio })),
       cliente: S.clienteVenta,
       telefono: S.telefonoVenta,
+      pagado,
     });
     const total = S.carrito.reduce((s, i) => s + i.qty * i.precio, 0);
     const n = S.carrito.reduce((s, i) => s + i.qty, 0);
     limpiarCarrito();
     await loadProductos();
-    toast(`✓ Venta de ${fmt(total)} (${n} item${n > 1 ? 's' : ''}) registrada`);
+    if (pagado) {
+      toast(`✓ Venta de ${fmt(total)} registrada`);
+    } else {
+      toast(`📋 Fiado de ${fmt(total)} anotado`);
+    }
   } catch(e) {
     toast('❌ Error: ' + e.message);
-    if (btn) { btn.disabled = false; }
     render();
   }
 }
@@ -1069,6 +1119,35 @@ async function agregarCliente() {
     $('cl-mail').value = '';
     render();
     toast('✓ Cliente agregado');
+  } catch(e) { toast('❌ ' + e.message); }
+}
+
+// ══ FIADOS ════════════════════════════════════════════════════════════════
+
+function formatearTelWA(tel) {
+  if (!tel) return '';
+  const solo = tel.replace(/\D/g, '');
+  if (!solo) return '';
+  // Argentina: agregar 549 si no tiene código de país
+  if (solo.startsWith('549')) return solo;
+  if (solo.startsWith('54')) return '549' + solo.slice(2).replace(/^0/, '').replace(/^15/, '');
+  if (solo.startsWith('0')) return '549' + solo.slice(1).replace(/^15/, '');
+  return '549' + solo;
+}
+
+function armarMensajeWA(f) {
+  const nombre = f.cliente ? `¡Hola ${f.cliente.split(' ')[0]}! 💜` : '¡Hola! 💜';
+  const items = f.items.map(i =>
+    `   ✦ ${i.detalle.split('/')[0].trim().slice(0, 40)} x${i.cantidad} — ${fmt(i.total)}`
+  ).join('\n');
+  return `✨ ¡Gracias por comprar en KaryBu! ✨\n\n${nombre}\nTe mando el detalle de tu compra:\n\n${items}\n\n💰 *Total: ${fmt(f.total)}*\n\n¡Fue un placer atenderte! 🛍️💜`;
+}
+
+async function cobrarFiado(grupo) {
+  try {
+    await api('PUT', '/api/fiados/' + grupo + '/pagar', {});
+    toast('✓ Pago confirmado');
+    loadDashboard();
   } catch(e) { toast('❌ ' + e.message); }
 }
 
