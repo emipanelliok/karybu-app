@@ -274,6 +274,16 @@ app.post('/api/ventas', asyncHandler(async (req, res) => {
       WHERE codigo = ${codigo}`;
   }
 
+  // Auto-guardar cliente si tiene nombre y no existe ya
+  if (cliente && cliente.trim()) {
+    const existing = await sql`SELECT id FROM clientes WHERE LOWER(nombre) = LOWER(${cliente.trim()}) LIMIT 1`;
+    if (existing.length === 0) {
+      await sql`INSERT INTO clientes (nombre, telefono) VALUES (${cliente.trim()}, ${telefono || ''})`;
+    } else if (telefono) {
+      await sql`UPDATE clientes SET telefono = ${telefono} WHERE id = ${existing[0].id}`;
+    }
+  }
+
   res.json({ success: true, grupo, mensaje: 'Venta registrada' });
 }));
 
