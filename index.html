@@ -363,6 +363,10 @@
         <input type="text" id="edit-codigo" readonly style="background:#f5f5f5">
       </div>
       <div class="input-group">
+        <label>Nombre / Detalle</label>
+        <input type="text" id="edit-detalle" placeholder="Descripción del producto">
+      </div>
+      <div class="input-group">
         <label>Cantidad en stock</label>
         <input type="number" id="edit-cantidad" min="0" inputmode="numeric">
       </div>
@@ -860,6 +864,7 @@ function editarProducto(codigo) {
   if (!p) return;
   S.editingCodigo = codigo;
   $('edit-codigo').value = p.codigo;
+  $('edit-detalle').value = p.detalle;
   $('edit-cantidad').value = p.cantidad;
   $('edit-precio').value = p.precioVenta;
   $('edit-costo').value = p.costoUnitario;
@@ -869,11 +874,12 @@ function editarProducto(codigo) {
 async function guardarEdicion() {
   const codigo = S.editingCodigo;
   if (!codigo) return;
+  const detalle = $('edit-detalle').value.trim();
   const cantidad = parseInt($('edit-cantidad').value);
   const precioVenta = parseFloat($('edit-precio').value);
   const costoUnitario = parseFloat($('edit-costo').value);
   try {
-    await api('PUT', '/api/stock/' + encodeURIComponent(codigo), { cantidad, precioVenta, costoUnitario });
+    await api('PUT', '/api/stock/' + encodeURIComponent(codigo), { detalle, cantidad, precioVenta, costoUnitario });
     await loadProductos();
     cerrarModal('modal-producto');
     render();
