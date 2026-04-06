@@ -789,6 +789,12 @@ function renderVender() {
 
     ${hayCarrito ? `
     <div class="section" style="padding-top:0">
+      <div class="section-title">Fecha de la venta</div>
+      <input type="date" id="venta-fecha" value="${new Date().toISOString().split('T')[0]}"
+        style="height:48px; padding:0 14px; border:1.5px solid var(--border); border-radius:10px; font-size:16px; width:100%; color:var(--text);">
+    </div>
+
+    <div class="section" style="padding-top:0">
       <div class="section-title">Cliente (opcional)</div>
       <div class="search-wrap" style="position:relative">
         <span class="search-icon">👤</span>
@@ -880,11 +886,14 @@ function confirmarVenta() {
 async function confirmarPago(pagado) {
   cerrarModal('modal-pago');
   try {
+    const fechaEl = $('venta-fecha');
+    const fecha = fechaEl ? fechaEl.value : new Date().toISOString().split('T')[0];
     await api('POST', '/api/ventas', {
       items: S.carrito.map(i => ({ codigo: i.codigo, detalle: i.detalle, cantidad: i.qty, precioUnitario: i.precio })),
       cliente: S.clienteVenta,
       telefono: S.telefonoVenta,
       pagado,
+      fecha,
     });
     const total = S.carrito.reduce((s, i) => s + i.qty * i.precio, 0);
     const n = S.carrito.reduce((s, i) => s + i.qty, 0);

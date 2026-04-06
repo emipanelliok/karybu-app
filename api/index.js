@@ -258,13 +258,13 @@ app.get('/api/ventas', asyncHandler(async (req, res) => {
 
 app.post('/api/ventas', asyncHandler(async (req, res) => {
   const sql = getSQL();
-  const { items, cliente = '', telefono = '', pagado = true } = req.body;
+  const { items, cliente = '', telefono = '', pagado = true, fecha: fechaBody } = req.body;
 
   if (!items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'Se requiere al menos un producto' });
   }
 
-  const fecha = new Date().toISOString().split('T')[0];
+  const fecha = fechaBody || new Date().toISOString().split('T')[0];
   const grupo = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
   for (const item of items) {
